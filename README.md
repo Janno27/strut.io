@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Application de Gestion de Mannequins
 
-## Getting Started
+Une application moderne pour la gestion de mannequins, permettant aux agences de gérer leur catalogue de mannequins et aux clients de parcourir et sélectionner des mannequins pour leurs projets.
 
-First, run the development server:
+## Technologies Utilisées
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Frontend**: Next.js, React, Tailwind CSS, Shadcn UI
+- **Backend**: Supabase (Auth, Storage, Database)
+- **Langages**: TypeScript
+
+## Structure du Projet
+
+```
+casting-app/
+├── app/
+│   ├── (routes)/              # Routes de l'application
+│   │   ├── (auth)/            # Pages d'authentification
+│   │   ├── dashboard/         # Tableau de bord utilisateur
+│   │   ├── models/            # Pages de gestion des mannequins
+│   │   └── admin/             # Pages d'administration
+│   ├── components/            # Composants réutilisables
+│   │   ├── ui/                # Composants UI génériques (Shadcn)
+│   │   ├── models/            # Composants spécifiques aux mannequins
+│   │   └── layout/            # Composants de mise en page
+│   ├── lib/                   # Bibliothèques et utilitaires
+│   │   └── supabase/          # Configuration Supabase
+│   ├── services/              # Services pour interagir avec l'API
+│   ├── hooks/                 # Hooks React personnalisés
+│   ├── types/                 # Définitions des types TypeScript
+│   ├── context/               # Contextes React
+│   └── utils/                 # Fonctions utilitaires
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Configuration
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Variables d'environnement
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Créez un fichier `.env.local` à la racine du projet avec les variables suivantes :
 
-## Learn More
+```
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=votre_url_supabase
+NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_cle_anon_supabase
+```
 
-To learn more about Next.js, take a look at the following resources:
+Vous pouvez trouver ces valeurs dans les paramètres de votre projet Supabase, dans la section "API".
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Base de données
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Pour configurer la base de données Supabase, exécutez le script SQL suivant dans l'éditeur SQL de Supabase :
 
-## Deploy on Vercel
+```sql
+-- Voir le fichier app/sql/create_users_table.sql
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Développement
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+# Installer les dépendances
+npm install
+
+# Lancer le serveur de développement
+npm run dev
+```
+
+## Authentification
+
+L'application utilise Supabase Auth pour l'authentification. Les rôles disponibles sont :
+
+- `admin` : Administrateur avec accès complet
+- `agent` : Agent de casting
+- `model` : Mannequin
+- `client` : Client (par défaut, ne nécessite pas de connexion)
+
+Seuls les rôles admin, agent et model nécessitent une connexion pour accéder à des fonctionnalités spécifiques.
+
+## Fonctionnalités
+
+- Authentification (connexion, inscription, récupération de mot de passe)
+- Gestion des mannequins (ajout, modification, suppression)
+- Recherche et filtrage avancés
+- Gestion des castings et événements
+- Tableau de bord pour les utilisateurs
+- Zone d'administration
+
+## Licence
+
+[Licence à définir]
