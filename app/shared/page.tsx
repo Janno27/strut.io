@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { createClient } from "@/app/lib/supabase/client"
 import { ModelTabs } from "../components/list/model-tabs"
@@ -45,7 +45,8 @@ interface GridModel {
   experience?: string[]
 }
 
-export default function SharedPage() {
+// Composant qui utilise useSearchParams
+function SharedPageContent() {
   const searchParams = useSearchParams()
   const agentId = searchParams.get("agent")
   const supabase = createClient()
@@ -170,5 +171,18 @@ export default function SharedPage() {
         />
       )}
     </div>
+  )
+}
+
+// Composant principal avec Suspense
+export default function SharedPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center h-64">
+        <p>Chargement...</p>
+      </div>
+    }>
+      <SharedPageContent />
+    </Suspense>
   )
 } 

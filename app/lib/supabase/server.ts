@@ -2,7 +2,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export function createClient() {
-  const cookieStore = cookies();
+  // Forcer le type pour résoudre l'erreur de typage
+  const cookieStore = cookies() as any;
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || '',

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion"
 import { ModelCard } from "./model-card"
-import { ModelDetail } from "./detail/model-detail"
+import { ModelDetail } from "@/app/components/list/detail/model-detail"
 import { AddModelCard } from "./add-model-card"
 import { AddModelModal } from "./add-model-modal"
 
