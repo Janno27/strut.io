@@ -14,7 +14,12 @@ interface AuthContextProps {
     error: Error | null;
     data: Session | null;
   }>;
-  signUp: (email: string, password: string, role: string, fullName: string) => Promise<{
+  signUp: (
+    email: string,
+    password: string,
+    role: string,
+    fullName: string
+  ) => Promise<{
     error: Error | null;
     data: Session | null;
   }>;
@@ -31,14 +36,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   useEffect(() => {
-    // Récupérer la session initiale
     const getInitialSession = async () => {
       setIsLoading(true);
-      
       try {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
-        
         if (session?.user) {
           setUser(session.user);
           await fetchUserProfile(session.user.id);
@@ -52,18 +54,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     getInitialSession();
 
-    // Mettre en place un écouteur pour les changements d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, sessionData: Session | null) => {
         setSession(sessionData);
         setUser(sessionData?.user ?? null);
-        
         if (sessionData?.user) {
           await fetchUserProfile(sessionData.user.id);
         } else {
           setProfile(null);
         }
-        
         setIsLoading(false);
       }
     );
@@ -73,13 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Récupérer le profil utilisateur depuis la base de données
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
         .single();
 
       if (error) {
@@ -95,7 +93,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Connexion avec email et mot de passe
   const signIn = async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -103,9 +100,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
+
+      // ✅ Mise à jour immédiate du contexte
+      setSession(data.session);
+      setUser(data.user);
+      await fetchUserProfile(data.user.id);
 
       return { data: data.session, error: null };
     } catch (error) {
@@ -114,10 +114,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Inscription avec email et mot de passe
-  const signUp = async (email: string, password: string, role: string, fullName: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    role: string,
+    fullName: string
+  ) => {
     try {
-      // Créer un utilisateur dans Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -129,9 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       return { data: data.session, error: null };
     } catch (error) {
@@ -140,11 +141,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Déconnexion
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
       setProfile(null);
+      setSession(null);
+      setUser(null);
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
     }
@@ -169,4 +171,4 @@ export const useAuth = () => {
     throw new Error("useAuth doit être utilisé à l'intérieur d'un AuthProvider");
   }
   return context;
-}; 
+};
