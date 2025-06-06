@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/app/lib/supabase/client"
+import { supabase } from "@/app/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { ModelDetailProps, ModelFormData } from "./types"
 import { ActionButtons } from "./action-buttons"
@@ -50,7 +50,6 @@ export function ModelDetail({
   const [tempAdditionalImages, setTempAdditionalImages] = useState<string[]>([])
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
   
-  const supabase = createClient()
   const { toast } = useToast()
   
   // Extraction du prénom et nom

@@ -1,39 +1,27 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { NextResponse, type NextRequest } from 'next/server';
+// middleware.ts
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-export function createClient(request: NextRequest) {
-  // Créer un objet pour gérer les cookies
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+// Fonction pour créer un client Supabase dans le middleware
+export function createClient(req: NextRequest) {
+  const res = NextResponse.next();
+  const supabase = createMiddlewareClient({ req, res });
+  
+  return { supabase, response: res };
+}
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: CookieOptions) {
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-        },
-      },
-    }
-  );
+// Middleware exporté pour usage direct dans le fichier middleware principal
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
 
-  return { supabase, response };
-} 
+  const supabase = createMiddlewareClient({ req, res });
+
+  await supabase.auth.getSession(); // synchronise les cookies
+
+  return res;
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};

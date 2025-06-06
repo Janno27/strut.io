@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 import { UserProfile } from "../lib/supabase/supabase";
-import { createClient } from "../lib/supabase/client";
+import { supabase } from "../lib/supabase/client";
 
 interface AuthContextProps {
   user: User | null;
@@ -14,12 +14,7 @@ interface AuthContextProps {
     error: Error | null;
     data: Session | null;
   }>;
-  signUp: (
-    email: string,
-    password: string,
-    role: string,
-    fullName: string
-  ) => Promise<{
+  signUp: (email: string, password: string, role: string, fullName: string) => Promise<{
     error: Error | null;
     data: Session | null;
   }>;
@@ -33,17 +28,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
-    const getInitialSession = async () => {
+    // Vérifier s'il y a déjà une session
+    const checkSession = async () => {
       setIsLoading(true);
       try {
+        // Récupérer la session depuis les cookies
         const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        if (session?.user) {
+        
+        if (session) {
+          setSession(session);
           setUser(session.user);
-          await fetchUserProfile(session.user.id);
+          
+          // Récupérer le profil utilisateur
+          if (session.user) {
+            await fetchUserProfile(session.user.id);
+          }
         }
       } catch (error) {
         console.error("Erreur lors de la récupération de la session:", error);
@@ -52,21 +53,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    getInitialSession();
+    checkSession();
 
+    // Écouter les changements d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, sessionData: Session | null) => {
-        setSession(sessionData);
-        setUser(sessionData?.user ?? null);
-        if (sessionData?.user) {
-          await fetchUserProfile(sessionData.user.id);
+      async (event: AuthChangeEvent, currentSession: Session | null) => {
+        console.log("Événement d'authentification:", event);
+        
+        if (currentSession) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          
+          if (currentSession.user) {
+            await fetchUserProfile(currentSession.user.id);
+          }
         } else {
+          setSession(null);
+          setUser(null);
           setProfile(null);
         }
+        
         setIsLoading(false);
       }
     );
 
+    // Nettoyer l'abonnement
     return () => {
       subscription.unsubscribe();
     };
@@ -100,12 +111,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
       });
 
-      if (error) throw error;
-
-      // ✅ Mise à jour immédiate du contexte
-      setSession(data.session);
-      setUser(data.user);
-      await fetchUserProfile(data.user.id);
+      if (error) {
+        throw error;
+      }
 
       return { data: data.session, error: null };
     } catch (error) {
@@ -114,12 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    role: string,
-    fullName: string
-  ) => {
+  const signUp = async (email: string, password: string, role: string, fullName: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -132,7 +135,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       return { data: data.session, error: null };
     } catch (error) {
@@ -145,8 +150,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await supabase.auth.signOut();
       setProfile(null);
-      setSession(null);
       setUser(null);
+      setSession(null);
+      
+      // Recharger la page pour assurer que tout est réinitialisé correctement
+      window.location.href = "/";
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
     }

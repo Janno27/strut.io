@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { createClient } from "@/app/lib/supabase/client"
+import { supabase } from "@/app/lib/supabase/client"
 import { ModelTabs } from "../components/list/model-tabs"
 import { ModelGrid } from "../components/list/model-grid"
 
@@ -49,7 +49,6 @@ interface GridModel {
 function SharedPageContent() {
   const searchParams = useSearchParams()
   const agentId = searchParams.get("agent")
-  const supabase = createClient()
   
   // État pour les modèles
   const [femaleModels, setFemaleModels] = useState<Model[]>([])

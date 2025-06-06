@@ -6,7 +6,7 @@ import { ModelGrid } from "./model-grid"
 import { WishlistDrawer } from "../wishlist/wishlist-drawer"
 import { getWishlist, toggleWishlist } from "../../services/wishlist-service"
 import { useAuth } from "../../context/auth-context"
-import { createClient } from "@/app/lib/supabase/client"
+import { supabase } from "@/app/lib/supabase/client"
 import { AddModelModal } from "./add-model-modal"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -65,7 +65,6 @@ export function ModelList() {
 
   // Récupérer les informations de l'utilisateur connecté
   const { profile } = useAuth();
-  const supabase = createClient();
 
   // Vérifier si l'utilisateur peut ajouter un modèle (Admin ou Agent)
   const canAddModel = profile?.role === 'admin' || profile?.role === 'agent';

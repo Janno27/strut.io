@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Upload, X } from "lucide-react"
 import Image from "next/image"
 import { useAuth } from "@/app/context/auth-context"
-import { createClient } from "@/app/lib/supabase/client"
+import { supabase } from "@/app/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 
 interface AddModelModalProps {
@@ -26,7 +26,6 @@ interface AddModelModalProps {
 
 export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalProps) {
   // Supabase client
-  const supabase = createClient()
   const { profile } = useAuth()
   const { toast } = useToast()
 
@@ -38,6 +37,10 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
   const [isLoading, setIsLoading] = useState(false)
   const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([])
+  
+  // État pour les valeurs personnalisées
+  const [customEyeColor, setCustomEyeColor] = useState("")
+  const [customHairColor, setCustomHairColor] = useState("")
   
   // État pour le formulaire
   const [formData, setFormData] = useState({
@@ -66,6 +69,32 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
   // Gérer les changements de select
   const handleSelectChange = (value: string, name: string) => {
     setFormData(prev => ({ ...prev, [name]: value }))
+    
+    // Réinitialiser les valeurs personnalisées lorsqu'une option standard est sélectionnée
+    if (name === "eyeColor" && value !== "autre") {
+      setCustomEyeColor("")
+    }
+    
+    if (name === "hairColor" && value !== "autre") {
+      setCustomHairColor("")
+    }
+  }
+  
+  // Gérer les changements de valeur personnalisée
+  const handleCustomValueChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
+    const { value } = e.target
+    
+    if (fieldName === "eyeColor") {
+      setCustomEyeColor(value)
+      // On ne modifie pas la valeur du select, seulement la valeur personnalisée
+      // La valeur du formData.eyeColor reste "autre"
+    }
+    
+    if (fieldName === "hairColor") {
+      setCustomHairColor(value)
+      // On ne modifie pas la valeur du select, seulement la valeur personnalisée
+      // La valeur du formData.hairColor reste "autre"
+    }
   }
 
   // Télécharger l'image principale
@@ -78,18 +107,31 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
     }
   }
 
-  // Télécharger des images supplémentaires
+  // Télécharger des images supplémentaires (multiple)
   const handleAdditionalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setAdditionalImageFiles(prev => [...prev, file])
-      const imageUrl = URL.createObjectURL(file)
-      setAdditionalImages(prev => [...prev, imageUrl])
+    const files = e.target.files
+    if (files && files.length > 0) {
+      // Convertir FileList en Array pour pouvoir itérer dessus
+      const filesArray = Array.from(files)
+      
+      // Ajouter les nouveaux fichiers à la liste existante
+      const newFiles = [...additionalImageFiles, ...filesArray]
+      setAdditionalImageFiles(newFiles)
+      
+      // Créer les URLs pour l'aperçu
+      const newImageUrls = filesArray.map(file => URL.createObjectURL(file))
+      setAdditionalImages(prev => [...prev, ...newImageUrls])
+      
+      // Réinitialiser l'input de fichier pour permettre de sélectionner les mêmes fichiers à nouveau si nécessaire
+      e.target.value = ""
     }
   }
 
   // Supprimer une image supplémentaire
   const removeAdditionalImage = (index: number) => {
+    // Libérer l'URL de l'objet pour éviter les fuites de mémoire
+    URL.revokeObjectURL(additionalImages[index])
+    
     setAdditionalImages(prev => prev.filter((_, i) => i !== index))
     setAdditionalImageFiles(prev => prev.filter((_, i) => i !== index))
   }
@@ -193,6 +235,10 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
       const { mainImageUrl, additionalImageUrls } = await uploadImagesToStorage();
       console.log("Images téléchargées avec succès:", { mainImageUrl, additionalImageUrls });
       
+      // Préparer les données du modèle avec les valeurs personnalisées si nécessaire
+      const finalEyeColor = formData.eyeColor === "autre" && customEyeColor.trim() ? customEyeColor : formData.eyeColor;
+      const finalHairColor = formData.hairColor === "autre" && customHairColor.trim() ? customHairColor : formData.hairColor;
+      
       // Préparer les données du modèle
       const modelData = {
         first_name: formData.firstName,
@@ -204,8 +250,8 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
         waist: parseInt(formData.waist) || null,
         hips: parseInt(formData.hips) || null,
         shoe_size: parseFloat(formData.shoeSize) || null,
-        eye_color: formData.eyeColor || null,
-        hair_color: formData.hairColor || null,
+        eye_color: finalEyeColor || null,
+        hair_color: finalHairColor || null,
         instagram: formData.instagram || null,
         models_com_link: formData.modelsComLink || null,
         description: formData.description || null,
@@ -339,7 +385,6 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
-                    required
                   />
                 </div>
                 
@@ -350,7 +395,6 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
-                    required
                   />
                 </div>
               </div>
@@ -380,7 +424,6 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                     type="number"
                     value={formData.age}
                     onChange={handleChange}
-                    required
                   />
                 </div>
               </div>
@@ -469,9 +512,18 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                       <SelectItem value="noisette">Noisette</SelectItem>
                       <SelectItem value="noir">Noir</SelectItem>
                       <SelectItem value="gris">Gris</SelectItem>
-                      <SelectItem value="autre">Autre</SelectItem>
+                      <SelectItem value="autre">Autre (préciser)</SelectItem>
                     </SelectContent>
                   </Select>
+                  {formData.eyeColor === "autre" && (
+                    <div className="mt-2">
+                      <Input
+                        placeholder="Précisez la couleur des yeux"
+                        value={customEyeColor}
+                        onChange={(e) => handleCustomValueChange(e, "eyeColor")}
+                      />
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
@@ -490,9 +542,18 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                       <SelectItem value="roux">Roux</SelectItem>
                       <SelectItem value="noir">Noir</SelectItem>
                       <SelectItem value="gris">Gris/Blanc</SelectItem>
-                      <SelectItem value="autre">Autre</SelectItem>
+                      <SelectItem value="autre">Autre (préciser)</SelectItem>
                     </SelectContent>
                   </Select>
+                  {formData.hairColor === "autre" && (
+                    <div className="mt-2">
+                      <Input
+                        placeholder="Précisez la couleur des cheveux"
+                        value={customHairColor}
+                        onChange={(e) => handleCustomValueChange(e, "hairColor")}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -561,10 +622,11 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                 
                 <div className="relative h-40 border rounded-lg flex flex-col items-center justify-center cursor-pointer">
                   <Plus className="h-8 w-8 mb-1 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">Ajouter</p>
+                  <p className="text-xs text-muted-foreground">Ajouter plusieurs photos</p>
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     className="absolute inset-0 opacity-0 cursor-pointer"
                     onChange={handleAdditionalImageUpload}
                   />
