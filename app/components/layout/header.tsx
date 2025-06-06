@@ -128,9 +128,9 @@ export function Header() {
       </div>
       
       <div className="text-center">
-        <h1 className="text-4xl font-bold">Models.io</h1>
+        <h1 className="text-4xl font-bold">Strut.io</h1>
         <p className="text-base text-muted-foreground mt-1">
-          Gérez et trouvez des mannequins pour vos projets
+        Simplifiez la gestion, sublimez vos talents.
         </p>
       </div>
       

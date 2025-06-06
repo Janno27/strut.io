@@ -102,7 +102,6 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
       if (mainImageFile) {
         const fileExt = mainImageFile.name.split('.').pop();
         const fileName = `${Date.now()}_main.${fileExt}`;
-        // Utiliser un chemin direct sans sous-dossier
         const filePath = fileName;
         
         console.log("Tentative d'upload:", { 
@@ -112,18 +111,30 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
           role: profile?.role
         });
         
-        const { data: mainImageUpload, error: mainImageError } = await supabase.storage
+        // Vérifier si le bucket existe
+        const { data: buckets } = await supabase.storage.listBuckets();
+        console.log("Buckets disponibles:", buckets);
+        
+        // Upload avec gestion d'erreur détaillée
+        const uploadResult = await supabase.storage
           .from('models')
-          .upload(filePath, mainImageFile);
-
-        if (mainImageError) {
-          console.error("Erreur détaillée:", mainImageError);
-          throw new Error(`Erreur lors du téléchargement de l'image principale: ${mainImageError.message}`);
+          .upload(filePath, mainImageFile, {
+            cacheControl: '3600',
+            upsert: true
+          });
+          
+        if (uploadResult.error) {
+          console.error("Erreur détaillée d'upload:", uploadResult.error);
+          throw new Error(`Erreur lors du téléchargement de l'image principale: ${uploadResult.error.message}`);
         }
 
         // Récupérer l'URL publique
         const { data: mainImageData } = supabase.storage.from('models').getPublicUrl(filePath);
+        if (!mainImageData) {
+          throw new Error("Impossible d'obtenir l'URL publique de l'image principale");
+        }
         mainImageUrl = mainImageData.publicUrl;
+        console.log("URL de l'image principale:", mainImageUrl);
       } else {
         throw new Error("Aucune image principale n'a été sélectionnée");
       }
@@ -134,24 +145,30 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
         const file = additionalImageFiles[i];
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${i}.${fileExt}`;
-        // Utiliser un chemin direct sans sous-dossier
         const filePath = fileName;
         
-        const { error: additionalImageError } = await supabase.storage
+        const uploadResult = await supabase.storage
           .from('models')
-          .upload(filePath, file);
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
 
-        if (additionalImageError) {
-          throw new Error(`Erreur lors du téléchargement de l'image supplémentaire: ${additionalImageError.message}`);
+        if (uploadResult.error) {
+          console.error("Erreur d'upload image supplémentaire:", uploadResult.error);
+          throw new Error(`Erreur lors du téléchargement de l'image supplémentaire: ${uploadResult.error.message}`);
         }
 
         // Récupérer l'URL publique
         const { data: additionalImageData } = supabase.storage.from('models').getPublicUrl(filePath);
-        additionalImageUrls.push(additionalImageData.publicUrl);
+        if (additionalImageData) {
+          additionalImageUrls.push(additionalImageData.publicUrl);
+        }
       }
 
       return { mainImageUrl, additionalImageUrls };
     } catch (error) {
+      console.error("Erreur dans uploadImagesToStorage:", error);
       throw error;
     }
   }
@@ -174,20 +191,21 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
       
       // Télécharger les images
       const { mainImageUrl, additionalImageUrls } = await uploadImagesToStorage();
+      console.log("Images téléchargées avec succès:", { mainImageUrl, additionalImageUrls });
       
       // Préparer les données du modèle
       const modelData = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         gender: formData.gender,
-        age: parseInt(formData.age),
-        height: parseInt(formData.height),
-        bust: parseInt(formData.bust),
-        waist: parseInt(formData.waist),
-        hips: parseInt(formData.hips),
-        shoe_size: parseFloat(formData.shoeSize),
-        eye_color: formData.eyeColor,
-        hair_color: formData.hairColor,
+        age: parseInt(formData.age) || null,
+        height: parseInt(formData.height) || null,
+        bust: parseInt(formData.bust) || null,
+        waist: parseInt(formData.waist) || null,
+        hips: parseInt(formData.hips) || null,
+        shoe_size: parseFloat(formData.shoeSize) || null,
+        eye_color: formData.eyeColor || null,
+        hair_color: formData.hairColor || null,
         instagram: formData.instagram || null,
         models_com_link: formData.modelsComLink || null,
         description: formData.description || null,
@@ -196,14 +214,19 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
         agent_id: profile.id
       };
       
+      console.log("Données du modèle à insérer:", modelData);
+      
       // Insérer les données dans la table models
-      const { error } = await supabase
+      const insertResult = await supabase
         .from('models')
         .insert([modelData]);
       
-      if (error) {
-        throw error;
+      if (insertResult.error) {
+        console.error("Erreur d'insertion dans la base de données:", insertResult.error);
+        throw insertResult.error;
       }
+      
+      console.log("Modèle ajouté avec succès:", insertResult);
       
       toast({
         title: "Succès",

@@ -7,8 +7,8 @@ import { Toaster } from "@/components/ui/toaster"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Casting App",
-  description: "Application de gestion de casting",
+  title: "Strut.io",
+  description: "Plateforme de gestion d'agence de mannequins",
 }
 
 export default function RootLayout({
