@@ -1,37 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@/app/lib/supabase/server'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
-  const response = NextResponse.json({ success: true });
+export async function POST() {
+  const supabase = await createClient()
   
-  // Créer le client Supabase avec les cookies sécurisés
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: any) {
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: any) {
-          response.cookies.delete({
-            name,
-            ...options,
-          });
-        },
-      },
-    }
-  );
+  await supabase.auth.signOut()
   
-  // Déconnecter l'utilisateur
-  await supabase.auth.signOut();
-  
-  return response;
-} 
+  return NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'), {
+    status: 302,
+  })
+}

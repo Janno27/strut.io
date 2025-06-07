@@ -1,140 +1,196 @@
-"use client";
+'use client'
 
-import { createContext, useContext, useEffect, useState } from "react";
-import { Session, User } from "@supabase/supabase-js";
-import { useRouter } from "next/navigation";
-import { createClient } from "../lib/supabase/client";
-import { UserProfile } from "../lib/supabase/types";
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import { User, Session } from '@supabase/supabase-js'
+import { createClient } from '@/app/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
-interface AuthContextProps {
-  user: User | null;
-  profile: UserProfile | null;
-  session: Session | null;
-  isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<{
-    error: Error | null;
-    data: Session | null;
-  }>;
-  signUp: (email: string, password: string, role: string, fullName: string) => Promise<{
-    error: Error | null;
-    data: Session | null;
-  }>;
-  signOut: () => Promise<void>;
+interface UserProfile {
+  id: string
+  email: string
+  role: string
+  full_name: string
 }
 
-const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+interface AuthContextType {
+  user: User | null
+  profile: UserProfile | null
+  session: Session | null
+  isLoading: boolean
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signUp: (email: string, password: string, role: string, fullName: string) => Promise<{ error: Error | null }>
+  signOut: () => Promise<void>
+  refreshSession: () => Promise<void>
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-  const supabase = createClient();
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
+  const supabase = createClient()
+
+  // Fonction pour rafraîchir la session
+  const refreshSession = async () => {
+    try {
+      const { data: { session: currentSession }, error } = await supabase.auth.getSession()
+      
+      if (error) {
+        console.error('Erreur lors du rafraîchissement:', error)
+        return
+      }
+
+      if (currentSession) {
+        setSession(currentSession)
+        setUser(currentSession.user)
+        
+        if (currentSession.user) {
+          await fetchUserProfile(currentSession.user.id)
+        }
+      } else {
+        setSession(null)
+        setUser(null)
+        setProfile(null)
+      }
+    } catch (error) {
+      console.error('Erreur lors du rafraîchissement de la session:', error)
+    }
+  }
 
   useEffect(() => {
-    // Cette fonction vérifie la session au chargement
+    let mounted = true
+
+    // Initialisation de l'authentification
     const initializeAuth = async () => {
-      setIsLoading(true);
+      setIsLoading(true)
+      
       try {
         // Récupérer la session actuelle
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession()
         
-        if (currentSession) {
-          setSession(currentSession);
-          setUser(currentSession.user);
+        if (error) {
+          console.error('Erreur lors de l\'initialisation:', error)
+          return
+        }
+
+        if (mounted && currentSession) {
+          setSession(currentSession)
+          setUser(currentSession.user)
           
-          // Récupérer le profil
           if (currentSession.user) {
-            await fetchUserProfile(currentSession.user.id);
+            await fetchUserProfile(currentSession.user.id)
           }
         }
       } catch (error) {
-        console.error("Erreur lors de l'initialisation de l'authentification:", error);
+        console.error('Erreur lors de l\'initialisation de l\'authentification:', error)
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false)
+        }
       }
-    };
+    }
 
-    initializeAuth();
+    initializeAuth()
 
-    // Abonnement aux changements d'état d'authentification
+    // Écouter les changements d'état d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        console.log("Événement d'authentification:", event);
+        console.log('Événement d\'authentification:', event, currentSession?.user?.id || 'no user')
         
-        // Mettre à jour l'état
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        if (currentSession?.user) {
-          await fetchUserProfile(currentSession.user.id);
+        if (!mounted) return
+
+        if (currentSession) {
+          setSession(currentSession)
+          setUser(currentSession.user)
+          
+          if (currentSession.user) {
+            await fetchUserProfile(currentSession.user.id)
+          }
         } else {
-          setProfile(null);
+          setSession(null)
+          setUser(null)
+          setProfile(null)
         }
-        
-        // Forcer le rechargement des données
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-          router.refresh();
+
+        // Forcer le rechargement pour synchroniser avec le serveur
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+          router.refresh()
         }
-        
-        setIsLoading(false);
+
+        setIsLoading(false)
       }
-    );
+    )
 
-    // Nettoyer l'abonnement
+    // Rafraîchir la session périodiquement (toutes les 5 minutes)
+    const interval = setInterval(refreshSession, 5 * 60 * 1000)
+
     return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+      mounted = false
+      subscription.unsubscribe()
+      clearInterval(interval)
+    }
+  }, [])
 
-  // Récupérer le profil de l'utilisateur
+  // Récupérer le profil utilisateur
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .single();
+        .single()
 
       if (error) {
-        console.error("Erreur lors de la récupération du profil:", error);
-        return;
+        console.error("Erreur lors de la récupération du profil:", error)
+        return
       }
 
       if (data) {
-        setProfile(data as UserProfile);
+        setProfile(data as UserProfile)
       }
     } catch (error) {
-      console.error("Erreur lors de la récupération du profil:", error);
+      console.error("Erreur lors de la récupération du profil:", error)
     }
-  };
+  }
 
-  // Connexion avec email et mot de passe
+  // Connexion
   const signIn = async (email: string, password: string) => {
     try {
+      setIsLoading(true)
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
-      });
+      })
 
       if (error) {
-        throw error;
+        throw error
       }
-      
-      // Forcer le rechargement de la page pour mettre à jour les cookies
-      router.refresh();
 
-      return { data: data.session, error: null };
+      // Attendre que la session soit mise à jour
+      await refreshSession()
+      
+      // Rediriger après connexion réussie
+      router.push('/dashboard')
+      router.refresh()
+
+      return { error: null }
     } catch (error) {
-      console.error("Erreur lors de la connexion:", error);
-      return { data: null, error: error as Error };
+      console.error("Erreur lors de la connexion:", error)
+      return { error: error as Error }
+    } finally {
+      setIsLoading(false)
     }
-  };
+  }
 
   // Inscription
   const signUp = async (email: string, password: string, role: string, fullName: string) => {
     try {
+      setIsLoading(true)
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -144,37 +200,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             full_name: fullName,
           },
         },
-      });
+      })
 
       if (error) {
-        throw error;
+        throw error
       }
 
-      // Forcer le rechargement de la page
-      router.refresh();
-
-      return { data: data.session, error: null };
+      return { error: null }
     } catch (error) {
-      console.error("Erreur lors de l'inscription:", error);
-      return { data: null, error: error as Error };
+      console.error("Erreur lors de l'inscription:", error)
+      return { error: error as Error }
+    } finally {
+      setIsLoading(false)
     }
-  };
+  }
 
   // Déconnexion
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
-      setProfile(null);
-      setUser(null);
-      setSession(null);
+      setIsLoading(true)
       
-      // Rediriger vers la page d'accueil et forcer le rechargement
-      router.push('/');
-      router.refresh();
+      // Déconnexion Supabase
+      await supabase.auth.signOut()
+      
+      // Nettoyer l'état local
+      setProfile(null)
+      setUser(null)
+      setSession(null)
+      
+      // Rediriger vers la page d'accueil
+      router.push('/')
+      router.refresh()
     } catch (error) {
-      console.error("Erreur lors de la déconnexion:", error);
+      console.error("Erreur lors de la déconnexion:", error)
+    } finally {
+      setIsLoading(false)
     }
-  };
+  }
 
   const value = {
     user,
@@ -184,15 +246,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
-  };
+    refreshSession,
+  }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error("useAuth doit être utilisé à l'intérieur d'un AuthProvider");
+    throw new Error("useAuth doit être utilisé à l'intérieur d'un AuthProvider")
   }
-  return context;
-}; 
+  return context
+}

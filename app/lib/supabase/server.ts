@@ -1,50 +1,35 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
-export const createClient = () => {
-  const cookieStore = cookies();
-  
+export async function createClient() {
+  const cookieStore = await cookies()
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          // @ts-ignore - Ignorer les erreurs de type pour résoudre le problème de cookies
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll()
         },
-        set(name: string, value: string, options: CookieOptions) {
+        setAll(cookiesToSet) {
           try {
-            // @ts-ignore - Ignorer les erreurs de type pour résoudre le problème de cookies
-            cookieStore.set({
-              name,
-              value,
-              ...options,
-              // Assurez-vous que les cookies sont configurés correctement pour Render.com
-              sameSite: 'lax',
-              secure: process.env.NODE_ENV === 'production',
-              path: '/',
-            });
+            cookiesToSet.forEach(({ name, value, options }) => {
+              const cookieOptions = {
+                ...options,
+                sameSite: 'lax' as const,
+                secure: process.env.NODE_ENV === 'production',
+                httpOnly: false, // Important pour que JS côté client puisse lire
+                path: '/',
+              }
+              cookieStore.set(name, value, cookieOptions)
+            })
           } catch (error) {
-            console.error('Erreur lors de la définition du cookie:', error);
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            // @ts-ignore - Ignorer les erreurs de type pour résoudre le problème de cookies
-            cookieStore.delete({
-              name,
-              ...options,
-              // Assurez-vous que les cookies sont supprimés correctement
-              sameSite: 'lax',
-              secure: process.env.NODE_ENV === 'production',
-              path: '/',
-            });
-          } catch (error) {
-            console.error('Erreur lors de la suppression du cookie:', error);
+            // Cette erreur peut être ignorée si le middleware rafraîchit les sessions
+            console.warn('Erreur lors du paramétrage des cookies:', error)
           }
         },
       },
     }
-  );
-}; 
+  )
+}
