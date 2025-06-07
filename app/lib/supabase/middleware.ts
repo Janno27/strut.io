@@ -11,10 +11,18 @@ export async function updateSession(req: NextRequest) {
   const res = NextResponse.next();
   
   try {
+    // Créer un client Supabase pour le middleware
     const supabase = createMiddlewareClient({ req, res });
     
     // Rafraîchir la session et mettre à jour les cookies
     await supabase.auth.getSession();
+    
+    // Résoudre les problèmes CORS pour les requêtes cross-origin
+    if (process.env.NODE_ENV === 'production') {
+      res.headers.set('Access-Control-Allow-Credentials', 'true');
+      res.headers.set('Access-Control-Allow-Origin', req.headers.get('origin') || '*');
+      res.headers.set('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    }
     
     return res;
   } catch (error) {
@@ -26,9 +34,11 @@ export async function updateSession(req: NextRequest) {
 // Middleware pour les routes protégées
 export async function authMiddleware(req: NextRequest) {
   const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
   
   try {
+    // Créer un client Supabase pour le middleware
+    const supabase = createMiddlewareClient({ req, res });
+    
     // Vérifier si l'utilisateur est authentifié
     const { data: { session } } = await supabase.auth.getSession();
     
@@ -40,7 +50,23 @@ export async function authMiddleware(req: NextRequest) {
     if (!session && isProtectedRoute) {
       // Rediriger vers la page de connexion
       const redirectUrl = new URL('/login', req.url);
-      return NextResponse.redirect(redirectUrl);
+      const redirectResponse = NextResponse.redirect(redirectUrl);
+      
+      // Ajouter les headers CORS à la redirection
+      if (process.env.NODE_ENV === 'production') {
+        redirectResponse.headers.set('Access-Control-Allow-Credentials', 'true');
+        redirectResponse.headers.set('Access-Control-Allow-Origin', req.headers.get('origin') || '*');
+        redirectResponse.headers.set('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+      }
+      
+      return redirectResponse;
+    }
+    
+    // Résoudre les problèmes CORS pour les requêtes cross-origin
+    if (process.env.NODE_ENV === 'production') {
+      res.headers.set('Access-Control-Allow-Credentials', 'true');
+      res.headers.set('Access-Control-Allow-Origin', req.headers.get('origin') || '*');
+      res.headers.set('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     }
     
     return res;

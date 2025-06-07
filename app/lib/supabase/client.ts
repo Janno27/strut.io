@@ -10,12 +10,17 @@ export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
   cookieOptions: {
     name: 'sb-auth',
     path: '/',
-    sameSite: 'lax',
-    domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost',
-    secure: process.env.NODE_ENV === 'production',
+    // SameSite=None est nécessaire pour que les cookies fonctionnent en cross-site (important pour Render)
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    // domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost',
+    secure: true, // Toujours sécurisé pour permettre SameSite=None
     maxAge: 60 * 60 * 24 * 365, // 1 an
   },
   cookieEncoding: 'base64url', // Force l'encodage à base64url au lieu de base64-json
+  // Ces options sont gérées automatiquement par la librairie
+  // persistSession: true,
+  // autoRefreshToken: true,
+  // detectSessionInUrl: true
 });
 
 // Pour la compatibilité avec le code existant

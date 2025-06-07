@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "../components/ui/toaster";
 import { AuthProvider } from "./context/auth-context";
+import { SessionRefresher } from "./components/session-refresher";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" suppressHydrationWarning>
       <body className={inter.className}>
         <AuthProvider>
+          <SessionRefresher />
           {children}
           <Toaster />
         </AuthProvider>

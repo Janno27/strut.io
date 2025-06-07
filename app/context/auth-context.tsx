@@ -20,6 +20,7 @@ interface AuthContextProps {
     data: Session | null;
   }>;
   signOut: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -30,6 +31,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+
+  // Vérifier si le navigateur est basé sur Chromium (Chrome, Opera, Edge)
+  const isChromiumBased = typeof window !== 'undefined' && 
+    (navigator.userAgent.includes('Chrome') || 
+     navigator.userAgent.includes('Opera') || 
+     navigator.userAgent.includes('Edge'));
+
+  // Fonction pour rafraîchir manuellement la session
+  const refreshSession = async () => {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error("Erreur lors du rafraîchissement de la session:", error);
+        return;
+      }
+      
+      if (data?.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+        
+        // Récupérer le profil utilisateur
+        if (data.session.user) {
+          await fetchUserProfile(data.session.user.id);
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors du rafraîchissement de la session:", error);
+    }
+  };
 
   useEffect(() => {
     // Vérifier s'il y a déjà une session
@@ -62,6 +93,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     checkSession();
 
+    // Pour les navigateurs Chromium, ajouter un intervalle pour rafraîchir la session
+    let refreshInterval: NodeJS.Timeout | null = null;
+    if (isChromiumBased && process.env.NODE_ENV === 'production') {
+      refreshInterval = setInterval(refreshSession, 5 * 60 * 1000); // Rafraîchir toutes les 5 minutes
+    }
+
     // Écouter les changements d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, currentSession: Session | null) => {
@@ -90,11 +127,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Nettoyer l'abonnement
+    // Nettoyer l'abonnement et l'intervalle
     return () => {
       subscription.unsubscribe();
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
     };
-  }, [router]);
+  }, [router, isChromiumBased]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -188,6 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
+    refreshSession,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

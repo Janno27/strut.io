@@ -29,9 +29,11 @@ export function createClient() {
         },
       },
       cookieOptions: {
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        // Configuration cohérente avec le client navigateur
+        secure: true, // Toujours sécurisé pour permettre SameSite=None
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         path: "/",
+        maxAge: 60 * 60 * 24 * 365, // 1 an
       },
       cookieEncoding: "base64url",
     }
