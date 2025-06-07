@@ -14,7 +14,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasAuthCookie, setHasAuthCookie] = useState<boolean | null>(null);
+  const [hasAuthCookie, setHasAuthCookie] = useState<boolean>(false);
   
   const { signIn, refreshSession } = useAuth();
   const router = useRouter();
@@ -29,8 +29,8 @@ export function LoginForm() {
   useEffect(() => {
     if (typeof document !== 'undefined') {
       const cookies = document.cookie;
-      const hasAuthCookie = cookies.includes('sb-auth');
-      setHasAuthCookie(hasAuthCookie);
+      const hasCookie = cookies.includes('sb-auth');
+      setHasAuthCookie(hasCookie);
     }
   }, []);
   
