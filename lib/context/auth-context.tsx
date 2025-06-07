@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
-import { createClient } from '@/app/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 interface UserProfile {
@@ -10,6 +10,7 @@ interface UserProfile {
   email: string
   role: string
   full_name: string
+  avatar_url?: string
 }
 
 interface AuthContextType {

@@ -2,9 +2,9 @@
 
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { createClient } from "@/app/lib/supabase/client"
-import { ModelTabs } from "../components/list/model-tabs"
-import { ModelGrid } from "../components/list/model-grid"
+import { createClient } from "@/lib/supabase/client"
+import { ModelTabs } from "../../components/list/model-tabs"
+import { ModelGrid } from "../../components/list/model-grid"
 
 // Type pour les modèles de la base de données
 interface Model {

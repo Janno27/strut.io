@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { createClient } from "@/app/lib/supabase/client"
-import { useToast } from "@/components/ui/use-toast"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 import { ModelDetailProps, ModelFormData } from "./types"
 import { ActionButtons } from "./action-buttons"
 import { DeleteConfirmation } from "./delete-confirmation"
@@ -50,7 +50,6 @@ export function ModelDetail({
   const [tempAdditionalImages, setTempAdditionalImages] = useState<string[]>([])
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
   
-  const { toast } = useToast()
   const supabase = createClient()
   
   // Extraction du prénom et nom
@@ -222,10 +221,7 @@ export function ModelDetail({
         throw new Error(`Erreur lors de la mise à jour: ${error.message}`)
       }
       
-      toast({
-        title: "Succès",
-        description: "Le modèle a été mis à jour avec succès"
-      })
+      toast.success("Le modèle a été mis à jour avec succès");
       
       setIsEditing(false)
       setTempMainImage(null)
@@ -238,11 +234,7 @@ export function ModelDetail({
         onModelUpdated()
       }
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message || "Une erreur est survenue lors de la mise à jour",
-        variant: "destructive"
-      })
+      toast.error(error.message || "Une erreur est survenue lors de la mise à jour");
     } finally {
       setIsLoading(false)
     }
@@ -309,10 +301,7 @@ export function ModelDetail({
         throw new Error(`Erreur lors de la suppression: ${deleteError.message}`)
       }
       
-      toast({
-        title: "Suppression réussie",
-        description: "Le modèle a été supprimé avec succès"
-      })
+      toast.success("Le modèle a été supprimé avec succès");
       
       onClose()
       
@@ -320,11 +309,7 @@ export function ModelDetail({
         onModelDeleted()
       }
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message || "Une erreur est survenue lors de la suppression",
-        variant: "destructive"
-      })
+      toast.error(error.message || "Une erreur est survenue lors de la suppression");
     } finally {
       setIsLoading(false)
       setIsDeleting(false)

@@ -1,5 +1,5 @@
-import { Header } from "./components/layout/header"
-import { ModelList } from "./components/list/model-list"
+import { Header } from "../components/layout/header"
+import { ModelList } from "../components/list/model-list"
 
 export default function Home() {
   return (

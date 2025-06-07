@@ -6,7 +6,7 @@ import { User, Settings, LogOut, LayoutDashboard, Link as LinkIcon, Copy, Check 
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/app/components/ui/theme-toggle"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/app/context/auth-context"
+import { useAuth } from "@/lib/context/auth-context"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 

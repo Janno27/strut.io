@@ -19,3 +19,37 @@ create index IF not exists idx_users_role on public.users using btree (role) TAB
 create trigger update_users_updated_at BEFORE
 update on users for EACH row
 execute FUNCTION update_updated_at_column ();
+
+
+-- Storage Bucket models
+-- Création du bucket storage pour les images des modèles
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('models', 'models', true); -- 'public' est défini sur true pour permettre l'accès public aux images
+
+-- Créer une politique pour permettre l'insertion dans le bucket models
+CREATE POLICY "Tous les utilisateurs peuvent uploader des images" 
+  ON storage.objects 
+  FOR INSERT 
+  TO authenticated
+  WITH CHECK (bucket_id = 'models');
+
+-- Créer une politique pour permettre de voir les images du bucket models
+CREATE POLICY "Tous les utilisateurs peuvent voir les images" 
+  ON storage.objects 
+  FOR SELECT 
+  TO public
+  USING (bucket_id = 'models');
+
+-- Créer une politique pour permettre la mise à jour des images
+CREATE POLICY "Les utilisateurs authentifiés peuvent mettre à jour leurs images" 
+  ON storage.objects 
+  FOR UPDATE 
+  TO authenticated
+  USING (bucket_id = 'models' AND owner = auth.uid());
+
+-- Créer une politique pour permettre la suppression des images
+CREATE POLICY "Les utilisateurs authentifiés peuvent supprimer leurs images" 
+  ON storage.objects 
+  FOR DELETE 
+  TO authenticated
+  USING (bucket_id = 'models' AND owner = auth.uid());

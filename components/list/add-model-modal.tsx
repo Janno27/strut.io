@@ -14,9 +14,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Upload, X } from "lucide-react"
 import Image from "next/image"
-import { useAuth } from "@/app/context/auth-context"
-import { createClient } from "@/app/lib/supabase/client"
-import { useToast } from "@/components/ui/use-toast"
+import { useAuth } from "@/lib/context/auth-context"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 interface AddModelModalProps {
   isOpen: boolean
@@ -28,7 +28,6 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
   // Supabase client
   const supabase = createClient()
   const { profile } = useAuth()
-  const { toast } = useToast()
 
   // État pour les images
   const [mainImage, setMainImage] = useState<string | null>(null)
@@ -221,11 +220,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
     e.preventDefault();
     
     if (!profile || !profile.id) {
-      toast({
-        title: "Erreur",
-        description: "Vous devez être connecté pour ajouter un modèle",
-        variant: "destructive"
-      });
+      toast.error("Vous devez être connecté pour ajouter un modèle");
       return;
     }
     
@@ -275,10 +270,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
       
       console.log("Modèle ajouté avec succès:", insertResult);
       
-      toast({
-        title: "Succès",
-        description: "Le modèle a été ajouté avec succès",
-      });
+      toast.success("Le modèle a été ajouté avec succès");
       
       // Réinitialiser le formulaire et fermer la modale
       setFormData({
@@ -311,11 +303,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
       
     } catch (error: any) {
       console.error("Erreur lors de l'ajout du modèle:", error);
-      toast({
-        title: "Erreur",
-        description: error.message || "Une erreur est survenue lors de l'ajout du modèle",
-        variant: "destructive"
-      });
+      toast.error(error.message || "Une erreur est survenue lors de l'ajout du modèle");
     } finally {
       setIsLoading(false);
     }

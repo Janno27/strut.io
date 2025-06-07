@@ -1,4 +1,4 @@
-import { createClient } from '../lib/supabase/client';
+import { createClient } from '../../lib/supabase/client';
 import { Model } from '../types';
 
 // Récupérer tous les mannequins
