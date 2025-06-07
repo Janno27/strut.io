@@ -6,14 +6,16 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Crée une instance unique du client Supabase avec une configuration adaptée
 export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
-  // Utiliser l'encodage base64url pour éviter les problèmes de parsing JSON
+  // Configuration optimisée pour éviter les problèmes de parsing et maintenir la session
   cookieOptions: {
     name: 'sb-auth',
     path: '/',
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production'
+    domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 365, // 1 an
   },
-  cookieEncoding: 'base64url' // Force l'encodage à base64url au lieu de base64-json
+  cookieEncoding: 'base64url', // Force l'encodage à base64url au lieu de base64-json
 });
 
 // Pour la compatibilité avec le code existant

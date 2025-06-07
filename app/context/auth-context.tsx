@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 import { UserProfile } from "../lib/supabase/supabase";
 import { supabase } from "../lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 interface AuthContextProps {
   user: User | null;
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     // Vérifier s'il y a déjà une session
@@ -35,15 +37,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       try {
         // Récupérer la session depuis les cookies
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data, error } = await supabase.auth.getSession();
         
-        if (session) {
-          setSession(session);
-          setUser(session.user);
+        if (error) {
+          console.error("Erreur lors de la récupération de la session:", error);
+          return;
+        }
+        
+        if (data?.session) {
+          setSession(data.session);
+          setUser(data.session.user);
           
           // Récupérer le profil utilisateur
-          if (session.user) {
-            await fetchUserProfile(session.user.id);
+          if (data.session.user) {
+            await fetchUserProfile(data.session.user.id);
           }
         }
       } catch (error) {
@@ -71,6 +78,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(null);
           setUser(null);
           setProfile(null);
+          
+          // Rediriger vers la page d'accueil si l'utilisateur est déconnecté
+          if (event === 'SIGNED_OUT') {
+            router.push('/');
+            router.refresh();
+          }
         }
         
         setIsLoading(false);
@@ -81,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -114,6 +127,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         throw error;
       }
+      
+      // Forcer une actualisation après la connexion pour s'assurer que les cookies sont correctement enregistrés
+      router.refresh();
 
       return { data: data.session, error: null };
     } catch (error) {
@@ -139,6 +155,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
+      // Forcer une actualisation après l'inscription pour s'assurer que les cookies sont correctement enregistrés
+      router.refresh();
+
       return { data: data.session, error: null };
     } catch (error) {
       console.error("Erreur lors de l'inscription:", error);
@@ -153,8 +172,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setSession(null);
       
-      // Recharger la page pour assurer que tout est réinitialisé correctement
-      window.location.href = "/";
+      // Forcer une actualisation après la déconnexion
+      router.push('/');
+      router.refresh();
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error);
     }

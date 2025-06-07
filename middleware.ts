@@ -1,29 +1,19 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { type NextRequest } from 'next/server';
+import { updateSession, authMiddleware } from './app/lib/supabase/middleware';
 
 export async function middleware(request: NextRequest) {
-  try {
-    const res = NextResponse.next();
-    
-    // Créer un client Supabase pour le middleware
-    const supabase = createMiddlewareClient({ req: request, res });
-
-    // Synchroniser les cookies de session
-    await supabase.auth.getSession();
-
-    // Si l'utilisateur n'est pas authentifié et tente d'accéder à des pages protégées
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session && request.nextUrl.pathname.startsWith('/admin')) {
-      // Rediriger vers la page de connexion
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
-
-    // Continuer avec la réponse modifiée pour maintenir les cookies de session
-    return res;
-  } catch (error) {
-    console.error('Erreur dans le middleware:', error);
-    return NextResponse.next();
+  // D'abord, mettre à jour la session pour tous les chemins
+  const updatedResponse = await updateSession(request);
+  
+  // Ensuite, vérifier si l'utilisateur est authentifié pour les chemins protégés
+  if (request.nextUrl.pathname.startsWith('/admin') || 
+      request.nextUrl.pathname.startsWith('/agent') || 
+      request.nextUrl.pathname.startsWith('/model')) {
+    return authMiddleware(request);
   }
+  
+  // Continuer avec la réponse mise à jour
+  return updatedResponse;
 }
 
 export const config = {

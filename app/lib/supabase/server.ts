@@ -14,12 +14,26 @@ export function createClient() {
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          cookieStore.set({ name, value, ...options });
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch (error) {
+            console.warn(`Erreur cookie ${name}:`, error);
+          }
         },
         remove(name: string, options: CookieOptions) {
-          cookieStore.delete({ name, ...options });
+          try {
+            cookieStore.delete({ name, ...options });
+          } catch (error) {
+            console.warn(`Erreur suppression cookie ${name}:`, error);
+          }
         },
       },
+      cookieOptions: {
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+      },
+      cookieEncoding: "base64url",
     }
   );
 } 
