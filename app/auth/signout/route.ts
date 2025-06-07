@@ -1,28 +1,37 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@/app/lib/supabase/server';
-import { revalidatePath } from 'next/cache';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
 export async function POST(request: NextRequest) {
-  try {
-    const supabase = createClient();
-    
-    // Vérifier si un utilisateur est connecté
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (user) {
-      // Déconnecter l'utilisateur
-      await supabase.auth.signOut();
+  const response = NextResponse.json({ success: true });
+  
+  // Créer le client Supabase avec les cookies sécurisés
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+        },
+        remove(name: string, options: any) {
+          response.cookies.delete({
+            name,
+            ...options,
+          });
+        },
+      },
     }
-    
-    // Revalider le chemin pour mettre à jour l'interface utilisateur
-    revalidatePath('/', 'layout');
-    
-    // Rediriger vers la page de connexion
-    return NextResponse.redirect(new URL('/login', request.url), {
-      status: 302,
-    });
-  } catch (error) {
-    console.error('Erreur lors de la déconnexion:', error);
-    return NextResponse.redirect(new URL('/error?message=Erreur lors de la déconnexion', request.url));
-  }
+  );
+  
+  // Déconnecter l'utilisateur
+  await supabase.auth.signOut();
+  
+  return response;
 } 

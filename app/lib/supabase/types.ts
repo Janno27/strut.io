@@ -1,12 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
-// Récupérer les variables d'environnement pour Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-// Créer le client Supabase
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
 // Types pour les utilisateurs
 export type UserRole = 'admin' | 'agent' | 'client' | 'model';
 

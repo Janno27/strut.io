@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/app/context/auth-context";
+import { useAuth } from "../../context/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,8 +31,8 @@ export function LoginForm() {
         return;
       }
       
-      // Rediriger vers la page d'accueil après la connexion
-      router.push("/");
+      // Forcer le rechargement complet de la page pour résoudre les problèmes de cookie
+      window.location.href = "/";
     } catch (err) {
       setError("Une erreur est survenue lors de la connexion");
       console.error(err);

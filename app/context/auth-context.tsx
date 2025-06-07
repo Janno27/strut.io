@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { createClient } from "../lib/supabase/client";
-import { UserProfile } from "../lib/supabase/supabase";
+import { UserProfile } from "../lib/supabase/types";
 
 interface AuthContextProps {
   user: User | null;
@@ -33,33 +33,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   useEffect(() => {
-    const getSession = async () => {
+    // Cette fonction vérifie la session au chargement
+    const initializeAuth = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error("Erreur lors de la récupération de la session:", error);
-          return;
-        }
+        // Récupérer la session actuelle
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        if (data?.session) {
-          setSession(data.session);
-          setUser(data.session.user);
+        if (currentSession) {
+          setSession(currentSession);
+          setUser(currentSession.user);
           
-          if (data.session.user) {
-            await fetchUserProfile(data.session.user.id);
+          // Récupérer le profil
+          if (currentSession.user) {
+            await fetchUserProfile(currentSession.user.id);
           }
         }
+      } catch (error) {
+        console.error("Erreur lors de l'initialisation de l'authentification:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    getSession();
+    initializeAuth();
 
-    // Écouter les changements d'authentification
+    // Abonnement aux changements d'état d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log("Événement d'authentification:", event);
+        
+        // Mettre à jour l'état
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -69,15 +73,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null);
         }
         
+        // Forcer le rechargement des données
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+          router.refresh();
+        }
+        
         setIsLoading(false);
       }
     );
 
+    // Nettoyer l'abonnement
     return () => {
       subscription.unsubscribe();
     };
-  }, [router]);
+  }, []);
 
+  // Récupérer le profil de l'utilisateur
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -99,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Connexion avec email et mot de passe
   const signIn = async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -110,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
       
-      // Force refresh
+      // Forcer le rechargement de la page pour mettre à jour les cookies
       router.refresh();
 
       return { data: data.session, error: null };
@@ -120,6 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Inscription
   const signUp = async (email: string, password: string, role: string, fullName: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -137,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      // Force refresh
+      // Forcer le rechargement de la page
       router.refresh();
 
       return { data: data.session, error: null };
@@ -147,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Déconnexion
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -154,7 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setSession(null);
       
-      // Force refresh
+      // Rediriger vers la page d'accueil et forcer le rechargement
       router.push('/');
       router.refresh();
     } catch (error) {
@@ -181,4 +195,4 @@ export const useAuth = () => {
     throw new Error("useAuth doit être utilisé à l'intérieur d'un AuthProvider");
   }
   return context;
-};
+}; 
