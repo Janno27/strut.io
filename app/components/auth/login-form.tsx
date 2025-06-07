@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/auth-context";
 import { Button } from "@/components/ui/button";
@@ -14,44 +14,9 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasAuthCookie, setHasAuthCookie] = useState<boolean>(false);
   
-  const { signIn, refreshSession } = useAuth();
+  const { signIn } = useAuth();
   const router = useRouter();
-
-  // Vérifier si le navigateur est basé sur Chromium (Chrome, Opera, Edge)
-  const isChromiumBased = typeof window !== 'undefined' && 
-    (navigator.userAgent.includes('Chrome') || 
-     navigator.userAgent.includes('Opera') || 
-     navigator.userAgent.includes('Edge'));
-  
-  // Vérifier si le cookie d'authentification est présent
-  useEffect(() => {
-    if (typeof document !== 'undefined') {
-      const cookies = document.cookie;
-      const hasCookie = cookies.includes('sb-auth');
-      setHasAuthCookie(hasCookie);
-    }
-  }, []);
-  
-  // Pour les navigateurs Chromium en production, tentative de rafraîchissement auto
-  useEffect(() => {
-    if (isChromiumBased && process.env.NODE_ENV === 'production' && hasAuthCookie) {
-      const attemptAutoRefresh = async () => {
-        try {
-          await refreshSession();
-          // Vérifier à nouveau si l'utilisateur est authentifié après le rafraîchissement
-          setTimeout(() => {
-            router.push('/');
-          }, 500);
-        } catch (err) {
-          console.error("Erreur lors du rafraîchissement automatique:", err);
-        }
-      };
-      
-      attemptAutoRefresh();
-    }
-  }, [isChromiumBased, hasAuthCookie, refreshSession, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,14 +57,6 @@ export function LoginForm() {
         </Alert>
       )}
       
-      {isChromiumBased && hasAuthCookie && process.env.NODE_ENV === 'production' && (
-        <Alert>
-          <AlertDescription>
-            Vous semblez déjà avoir un cookie d'authentification. Tentative de reconnexion automatique...
-          </AlertDescription>
-        </Alert>
-      )}
-      
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -132,7 +89,7 @@ export function LoginForm() {
           />
         </div>
         
-        <Button type="submit" className="w-full" disabled={isLoading || (hasAuthCookie && isChromiumBased)}>
+        <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? "Connexion en cours..." : "Se connecter"}
         </Button>
       </form>

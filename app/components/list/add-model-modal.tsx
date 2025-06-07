@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Upload, X } from "lucide-react"
 import Image from "next/image"
 import { useAuth } from "@/app/context/auth-context"
-import { supabase } from "@/app/lib/supabase/client"
+import { createClient } from "@/app/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 
 interface AddModelModalProps {
@@ -26,6 +26,7 @@ interface AddModelModalProps {
 
 export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalProps) {
   // Supabase client
+  const supabase = createClient()
   const { profile } = useAuth()
   const { toast } = useToast()
 

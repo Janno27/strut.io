@@ -1,8 +1,9 @@
-import { supabase } from '../lib/supabase/client';
+import { createClient } from '../lib/supabase/client';
 import { Model } from '../types';
 
 // Récupérer tous les mannequins
 export const getAllModels = async (): Promise<Model[]> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('models')
     .select('*');
@@ -17,6 +18,7 @@ export const getAllModels = async (): Promise<Model[]> => {
 
 // Récupérer un mannequin par ID
 export const getModelById = async (id: string): Promise<Model | null> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('models')
     .select('*')
@@ -33,6 +35,7 @@ export const getModelById = async (id: string): Promise<Model | null> => {
 
 // Créer un nouveau mannequin
 export const createModel = async (model: Omit<Model, 'id' | 'createdAt' | 'updatedAt'>): Promise<Model> => {
+  const supabase = createClient();
   const now = new Date().toISOString();
   
   const { data, error } = await supabase
@@ -55,6 +58,7 @@ export const createModel = async (model: Omit<Model, 'id' | 'createdAt' | 'updat
 
 // Mettre à jour un mannequin
 export const updateModel = async (id: string, updates: Partial<Model>): Promise<Model> => {
+  const supabase = createClient();
   const { data, error } = await supabase
     .from('models')
     .update({
@@ -75,6 +79,7 @@ export const updateModel = async (id: string, updates: Partial<Model>): Promise<
 
 // Supprimer un mannequin
 export const deleteModel = async (id: string): Promise<void> => {
+  const supabase = createClient();
   const { error } = await supabase
     .from('models')
     .delete()
@@ -96,6 +101,7 @@ export const searchModels = async (filters: Partial<{
   skills: string[];
   availability: boolean;
 }>): Promise<Model[]> => {
+  const supabase = createClient();
   let query = supabase.from('models').select('*');
   
   // Appliquer les filtres
@@ -136,6 +142,7 @@ export const searchModels = async (filters: Partial<{
 
 // Télécharger une photo de mannequin
 export const uploadModelPhoto = async (modelId: string, file: File, type: 'portrait' | 'full-body' | 'other'): Promise<string> => {
+  const supabase = createClient();
   const fileExt = file.name.split('.').pop();
   const fileName = `${modelId}/${Date.now()}.${fileExt}`;
   const filePath = `models/${fileName}`;

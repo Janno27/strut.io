@@ -6,7 +6,7 @@ import { ModelGrid } from "./model-grid"
 import { WishlistDrawer } from "../wishlist/wishlist-drawer"
 import { getWishlist, toggleWishlist } from "../../services/wishlist-service"
 import { useAuth } from "../../context/auth-context"
-import { supabase } from "@/app/lib/supabase/client"
+import { createClient } from "@/app/lib/supabase/client"
 import { AddModelModal } from "./add-model-modal"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
@@ -74,6 +74,7 @@ export function ModelList() {
     try {
       setLoading(true);
       
+      const supabase = createClient();
       let query = supabase.from('models').select('*');
       
       // Si l'utilisateur est un agent, filtrer par agent_id
@@ -102,7 +103,7 @@ export function ModelList() {
     } finally {
       setLoading(false);
     }
-  }, [profile, supabase]);
+  }, [profile]);
 
   // Charger les modèles depuis Supabase
   useEffect(() => {

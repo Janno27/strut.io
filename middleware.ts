@@ -1,23 +1,16 @@
-import { type NextRequest } from 'next/server';
-import { updateSession, authMiddleware } from './app/lib/supabase/middleware';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
 export async function middleware(request: NextRequest) {
-  // Vérifier si la requête provient d'un navigateur Chromium-based
-  const userAgent = request.headers.get('user-agent') || '';
-  const isChromium = userAgent.includes('Chrome') || userAgent.includes('Opera');
+  const res = NextResponse.next();
   
-  // D'abord, mettre à jour la session pour tous les chemins
-  const updatedResponse = await updateSession(request);
+  // Créer le client Supabase
+  const supabase = createMiddlewareClient({ req: request, res });
   
-  // Traiter les chemins protégés
-  if (request.nextUrl.pathname.startsWith('/admin') || 
-      request.nextUrl.pathname.startsWith('/agent') || 
-      request.nextUrl.pathname.startsWith('/model')) {
-    return authMiddleware(request);
-  }
+  // Rafraîchir la session utilisateur si elle existe
+  await supabase.auth.getSession();
   
-  // Continuer avec la réponse mise à jour
-  return updatedResponse;
+  return res;
 }
 
 export const config = {
@@ -27,8 +20,7 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public (public files)
      */
-    '/((?!_next/static|_next/image|favicon.ico|public).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }; 

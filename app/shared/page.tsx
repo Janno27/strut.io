@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { supabase } from "@/app/lib/supabase/client"
+import { createClient } from "@/app/lib/supabase/client"
 import { ModelTabs } from "../components/list/model-tabs"
 import { ModelGrid } from "../components/list/model-grid"
 
@@ -49,6 +49,7 @@ interface GridModel {
 function SharedPageContent() {
   const searchParams = useSearchParams()
   const agentId = searchParams.get("agent")
+  const supabase = createClient()
   
   // État pour les modèles
   const [femaleModels, setFemaleModels] = useState<Model[]>([])
@@ -91,7 +92,7 @@ function SharedPageContent() {
     }
     
     fetchModels()
-  }, [agentId, supabase])
+  }, [agentId])
   
   // Transformer les modèles pour correspondre au format attendu par ModelGrid
   const formatModelsForGrid = (models: Model[]): GridModel[] => {
