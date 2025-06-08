@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client"
 import { AddModelModal } from "./add-model-modal"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { ModelSkeleton } from "./model-skeleton"
 
 // Type pour les modèles de la base de données
 interface Model {
@@ -107,11 +108,16 @@ export function ModelList() {
 
   // Charger les modèles depuis Supabase
   useEffect(() => {
-    if (profile) {
-      fetchModels();
-    } else {
-      setLoading(false);
-    }
+    // Ajouter un délai pour s'assurer que l'état de l'authentification est à jour
+    const timer = setTimeout(() => {
+      if (profile) {
+        fetchModels();
+      } else {
+        setLoading(false);
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, [profile, fetchModels]);
 
   // Charger la wishlist au chargement du composant
@@ -225,7 +231,7 @@ export function ModelList() {
   };
 
   // Si l'utilisateur n'est pas connecté, afficher un message
-  if (!profile) {
+  if (!profile && !loading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-6">
         <div className="text-center space-y-3">
@@ -250,9 +256,7 @@ export function ModelList() {
   return (
     <div className="w-full">
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <p>Chargement des modèles...</p>
-        </div>
+        <ModelSkeleton />
       ) : (
         <>
           <ModelTabs

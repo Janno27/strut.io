@@ -74,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (error) {
           console.error('Erreur lors de l\'initialisation:', error)
+          setIsLoading(false)
           return
         }
 
@@ -85,9 +86,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await fetchUserProfile(currentSession.user.id)
           }
         }
+        
+        if (mounted) {
+          setIsLoading(false)
+        }
       } catch (error) {
         console.error('Erreur lors de l\'initialisation de l\'authentification:', error)
-      } finally {
         if (mounted) {
           setIsLoading(false)
         }
@@ -118,15 +122,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Forcer le rechargement pour synchroniser avec le serveur
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-          router.refresh()
+          // Délai pour permettre aux cookies de se propager
+          setTimeout(() => {
+            router.refresh()
+          }, 300)
         }
 
         setIsLoading(false)
       }
     )
 
-    // Rafraîchir la session périodiquement (toutes les 5 minutes)
-    const interval = setInterval(refreshSession, 5 * 60 * 1000)
+    // Rafraîchir la session périodiquement (toutes les 10 minutes)
+    const interval = setInterval(refreshSession, 10 * 60 * 1000)
 
     return () => {
       mounted = false
@@ -174,9 +181,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Attendre que la session soit mise à jour
       await refreshSession()
       
-      // Rediriger après connexion réussie
-      router.push('/dashboard')
-      router.refresh()
+      // Délai pour permettre aux cookies de se propager
+      setTimeout(() => {
+        router.push('/')
+        router.refresh()
+      }, 300)
 
       return { error: null }
     } catch (error) {
@@ -229,9 +238,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null)
       setSession(null)
       
-      // Rediriger vers la page d'accueil
-      router.push('/')
-      router.refresh()
+      // Délai pour permettre aux cookies de se propager
+      setTimeout(() => {
+        router.push('/')
+        router.refresh()
+      }, 300)
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error)
     } finally {

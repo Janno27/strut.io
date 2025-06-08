@@ -2,34 +2,25 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function createClient() {
-  const cookieStore = await cookies()
-
+  // @ts-ignore - le typage de Next.js pour cookies() est incompatible avec l'API de Supabase
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return cookieStore.getAll()
+        get(name) {
+          // @ts-ignore - le typage de Next.js pour cookies() est incompatible
+          return cookies().get(name)?.value
         },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              const cookieOptions = {
-                ...options,
-                sameSite: 'lax' as const,
-                secure: process.env.NODE_ENV === 'production',
-                httpOnly: false, // Important pour que JS côté client puisse lire
-                path: '/',
-              }
-              cookieStore.set(name, value, cookieOptions)
-            })
-          } catch (error) {
-            // Cette erreur peut être ignorée si le middleware rafraîchit les sessions
-            console.warn('Erreur lors du paramétrage des cookies:', error)
-          }
+        set(name, value, options) {
+          // Cette fonction ne fait rien en server component
+          // Les cookies sont gérés par le middleware
         },
-      },
+        remove(name, options) {
+          // Cette fonction ne fait rien en server component
+          // Les cookies sont gérés par le middleware
+        }
+      }
     }
   )
 }

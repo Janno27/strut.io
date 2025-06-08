@@ -31,8 +31,8 @@ export function LoginForm() {
         return;
       }
       
-      // Rediriger vers la page d'accueil après la connexion
-      router.push("/");
+      // Forcer une redirection complète au lieu d'une navigation côté client
+      window.location.href = "/";
     } catch (err) {
       setError("Une erreur est survenue lors de la connexion");
       console.error(err);
