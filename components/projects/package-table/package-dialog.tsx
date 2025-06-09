@@ -1,30 +1,35 @@
-"use client";
+'use client';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useEffect } from "react";
-import { useAuth } from "@/lib/context/auth-context";
-import { createClient } from "@/lib/supabase/client";
-
-interface PackageFormData {
-  name: string;
-  description: string;
-  status: string;
-}
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Model {
   id: string;
   first_name: string;
   last_name: string;
-  gender: string;
+  gender: 'male' | 'female';
   height: number;
   bust: number;
   waist: number;
   hips: number;
+}
+
+interface PackageFormData {
+  name: string;
+  description: string;
+  status: string;
 }
 
 interface PackageDialogProps {
@@ -52,68 +57,73 @@ export function PackageDialog({
 }: PackageDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Modifier le package" : "Créer un nouveau package"}
           </DialogTitle>
+          <DialogDescription>
+            Remplissez les informations pour {isEditing ? "modifier" : "créer"} le package.
+          </DialogDescription>
         </DialogHeader>
+
         <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
+          <div className="space-y-2">
             <Label htmlFor="name">Nom du package</Label>
-            <Input 
-              id="name" 
-              placeholder="Ex: Package Standard" 
+            <Input
+              id="name"
               value={newPackage.name}
               onChange={(e) => setNewPackage({ ...newPackage, name: e.target.value })}
             />
           </div>
-          <div className="grid gap-2">
+
+          <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <Textarea 
-              id="description" 
-              placeholder="Description du package"
-              rows={2}
+            <Textarea
+              id="description"
               value={newPackage.description}
               onChange={(e) => setNewPackage({ ...newPackage, description: e.target.value })}
             />
           </div>
-          <div className="grid gap-2">
+
+          <div className="space-y-2">
             <Label htmlFor="status">Statut</Label>
-            <select 
-              id="status"
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors"
+            <Select
               value={newPackage.status}
-              onChange={(e) => setNewPackage({ ...newPackage, status: e.target.value })}
+              onValueChange={(value) => setNewPackage({ ...newPackage, status: value })}
             >
-              <option value="pending">En attente</option>
-              <option value="planned">Planifié</option>
-              <option value="in_progress">En cours</option>
-              <option value="completed">Terminé</option>
-              <option value="cancelled">Annulé</option>
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner le statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">En attente</SelectItem>
+                <SelectItem value="planned">Planifié</SelectItem>
+                <SelectItem value="in_progress">En cours</SelectItem>
+                <SelectItem value="completed">Terminé</SelectItem>
+                <SelectItem value="cancelled">Annulé</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          
-          <div className="grid gap-2 mt-2">
+
+          <div className="space-y-2">
             <Label>Sélectionner les mannequins</Label>
-            <div className="border rounded-md p-4 max-h-64 overflow-y-auto">
+            <div className="max-h-[200px] overflow-y-auto border rounded-md p-3 space-y-2">
               {models.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Aucun mannequin disponible</p>
+                <p className="text-sm text-muted-foreground">
+                  Aucun mannequin disponible
+                </p>
               ) : (
-                <div className="space-y-2">
-                  {models.map(model => (
-                    <div key={model.id} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`model-${model.id}`} 
+                <div className="space-y-3">
+                  {models.map((model, index) => (
+                    <div key={`model-checkbox-${model.id || index}`} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`model-${model.id || index}`}
                         checked={selectedModels.includes(model.id)}
                         onCheckedChange={() => onModelSelection(model.id)}
                       />
-                      <Label 
-                        htmlFor={`model-${model.id}`}
-                        className="flex-1 text-sm cursor-pointer"
-                      >
-                        {model.first_name} {model.last_name} 
-                        <span className="text-xs text-muted-foreground ml-2">
+                      <Label htmlFor={`model-${model.id || index}`} className="text-sm font-normal">
+                        {model.first_name} {model.last_name}
+                        <span className="text-muted-foreground ml-1">
                           ({model.gender === 'male' ? 'H' : 'F'}, {model.height}cm, {model.bust}-{model.waist}-{model.hips})
                         </span>
                       </Label>
@@ -124,15 +134,16 @@ export function PackageDialog({
             </div>
           </div>
         </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
             Annuler
           </Button>
           <Button type="button" onClick={onCreatePackage}>
-            {isEditing ? "Enregistrer" : "Créer"}
+            {isEditing ? "Modifier" : "Créer"}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-} 
+}

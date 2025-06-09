@@ -356,7 +356,7 @@ export function PackageTable({ projectId }: PackageTableProps) {
 
   return (
     <div>
-      <div className="flex justify-end items-center mb-4">
+      <div className="flex justify-end mb-4">
         <NewPackageButton 
           isOpen={isDialogOpen} 
           setIsOpen={handleOpenDialog} 

@@ -29,6 +29,24 @@ interface Model {
   created_at: string
 }
 
+// Type pour le retour de l'API Supabase
+interface PackageData {
+  name: string
+  project_id: string
+}
+
+interface ProjectData {
+  client_id: string
+}
+
+interface ClientData {
+  agent_id: string
+}
+
+interface PackageModelData {
+  model_id: string
+}
+
 // Type pour les modèles utilisés dans la grille
 interface GridModel {
   id: string
@@ -43,6 +61,10 @@ interface GridModel {
   description?: string
   instagram?: string
   experience?: string[]
+  models_com_link?: string
+  shoe_size?: number
+  eye_color?: string
+  hair_color?: string
 }
 
 // Composant qui utilise useSearchParams
@@ -108,11 +130,14 @@ function SharedPageContent() {
               throw packageError
             }
             
+            // Typer correctement les données du package
+            const typedPackageData = packageData as unknown as PackageData
+            
             // Récupérer le projet associé au package
             const { data: projectData, error: projectError } = await supabase
               .from("projects")
               .select("client_id")
-              .eq("id", packageData.project_id)
+              .eq("id", typedPackageData.project_id)
               .single()
               
             if (projectError) {
@@ -121,11 +146,14 @@ function SharedPageContent() {
               throw projectError
             }
             
+            // Typer correctement les données du projet
+            const typedProjectData = projectData as unknown as ProjectData
+            
             // Récupérer le client associé au projet
             const { data: clientData, error: clientError } = await supabase
               .from("clients")
               .select("agent_id")
-              .eq("id", projectData.client_id)
+              .eq("id", typedProjectData.client_id)
               .single()
               
             if (clientError) {
@@ -134,16 +162,19 @@ function SharedPageContent() {
               throw clientError
             }
             
+            // Typer correctement les données du client
+            const typedClientData = clientData as unknown as ClientData
+            
             // Vérifier que le package appartient à l'agent demandé
-            if (clientData.agent_id !== agentId) {
+            if (typedClientData.agent_id !== agentId) {
               console.error("Ce package n'appartient pas à l'agent demandé")
               setError("Ce package n'appartient pas à l'agent demandé")
               throw new Error("Ce package n'appartient pas à l'agent demandé")
             }
             
             // Le package appartient bien à l'agent
-            console.log("Package trouvé:", packageData.name)
-            setPackageName(packageData.name)
+            console.log("Package trouvé:", typedPackageData.name)
+            setPackageName(typedPackageData.name)
             
             // Récupérer les mannequins du package
             const { data: packageModels, error: packageModelsError } = await supabase
@@ -164,7 +195,9 @@ function SharedPageContent() {
             }
             
             console.log("Nombre de modèles dans le package:", packageModels.length)
-            const modelIds = packageModels.map(item => item.model_id)
+            // Typer correctement les données des modèles du package
+            const typedPackageModels = packageModels as unknown as PackageModelData[]
+            const modelIds = typedPackageModels.map(item => item.model_id)
             
             // Récupérer les détails des modèles
             const { data: modelsData, error: modelsError } = await supabase
@@ -186,12 +219,15 @@ function SharedPageContent() {
             
             console.log("Nombre de mannequins récupérés:", modelsData.length)
             
-            // Séparer les modèles par genre
-            const female = modelsData.filter(model => model.gender === "female")
-            const male = modelsData.filter(model => model.gender === "male")
+            // Typer correctement les données des modèles
+            const typedModelsData = modelsData as unknown as Model[]
             
-            setFemaleModels(female)
-            setMaleModels(male)
+            // Séparer les modèles par genre
+            const female = typedModelsData.filter(model => model.gender === "female")
+            const male = typedModelsData.filter(model => model.gender === "male")
+            
+            setFemaleModels(female as Model[])
+            setMaleModels(male as Model[])
             setLoading(false)
             return
             
@@ -218,12 +254,15 @@ function SharedPageContent() {
         } else {
           console.log("Nombre de mannequins récupérés:", modelsData.length)
           
-          // Séparer les modèles par genre
-          const female = modelsData.filter(model => model.gender === "female")
-          const male = modelsData.filter(model => model.gender === "male")
+          // Typer correctement les données des modèles
+          const typedModelsData = modelsData as unknown as Model[]
           
-          setFemaleModels(female)
-          setMaleModels(male)
+          // Séparer les modèles par genre
+          const female = typedModelsData.filter(model => model.gender === "female")
+          const male = typedModelsData.filter(model => model.gender === "male")
+          
+          setFemaleModels(female as Model[])
+          setMaleModels(male as Model[])
           setError(null)
         }
       } catch (error) {

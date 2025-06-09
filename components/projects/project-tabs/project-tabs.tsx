@@ -8,8 +8,10 @@ import { createClient } from "@/lib/supabase/client";
 import { ClientSelector } from "./client-selector";
 import { ClientDialog } from "./client-dialog";
 import { ProjectDialog } from "./project-dialog";
-import { Plus } from "lucide-react";
+import { ProjectEditDialog } from "./project-edit-dialog";
+import { Plus, MoreHorizontal, Pencil, Trash } from "lucide-react";
 import { PackageTable } from "../package-table";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 export function ProjectTabs() {
   const [clients, setClients] = useState<any[]>([]);
@@ -17,8 +19,16 @@ export function ProjectTabs() {
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isClientDialogOpen, setIsClientDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
+  const [editingProject, setEditingProject] = useState({
+    id: "",
+    name: "",
+    description: "",
+    clientId: "",
+  });
   const [newProject, setNewProject] = useState({
     name: "",
     description: "",
@@ -154,6 +164,81 @@ export function ProjectTabs() {
     }
   };
   
+  // Gérer la mise à jour d'un projet
+  const handleUpdateProject = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    
+    if (!editingProject.name) {
+      console.log("Nom du projet manquant", { editingProject });
+      return;
+    }
+    
+    if (!editingProject.clientId) {
+      console.log("Client non sélectionné", { editingProject });
+      return;
+    }
+    
+    try {
+      console.log("Mise à jour du projet", { editingProject });
+      
+      const { data, error } = await supabase
+        .from('projects')
+        .update({
+          name: editingProject.name,
+          description: editingProject.description,
+          client_id: editingProject.clientId
+        })
+        .eq('id', editingProject.id)
+        .select();
+        
+      if (error) {
+        console.error("Erreur Supabase:", error);
+        throw error;
+      }
+      
+      if (data) {
+        console.log("Projet mis à jour avec succès:", data);
+        
+        // Recharger les projets
+        loadData();
+      }
+      
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du projet:', error);
+    }
+  };
+  
+  // Gérer la suppression d'un projet
+  const handleDeleteProject = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    
+    if (!editingProject.id) return;
+    
+    try {
+      console.log("Suppression du projet", { projectId: editingProject.id });
+      
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', editingProject.id);
+        
+      if (error) {
+        console.error("Erreur Supabase:", error);
+        throw error;
+      }
+      
+      console.log("Projet supprimé avec succès");
+      
+      // Recharger les projets
+      loadData();
+      
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la suppression du projet:', error);
+    }
+  };
+  
   // Gérer la création d'un nouveau client
   const handleCreateClient = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -215,6 +300,17 @@ export function ProjectTabs() {
     }
   };
 
+  // Ouvrir le dialogue de modification du projet
+  const openEditDialog = (project: any) => {
+    setEditingProject({
+      id: project.id,
+      name: project.name,
+      description: project.description || "",
+      clientId: project.client_id,
+    });
+    setIsEditDialogOpen(true);
+  };
+
   // Filtrer les projets en fonction du client sélectionné
   const filteredProjects = !selectedClient || selectedClient.id === 'all'
     ? projects
@@ -222,7 +318,7 @@ export function ProjectTabs() {
 
   return (
     <div>
-      <div className="flex justify-end items-center mb-6">
+      <div className="flex justify-start items-center mb-6">
         <ClientSelector 
           clients={clients}
           selectedClient={selectedClient}
@@ -237,6 +333,16 @@ export function ProjectTabs() {
         newClient={newClient}
         setNewClient={setNewClient}
         onCreateClient={handleCreateClient}
+      />
+
+      <ProjectEditDialog
+        isOpen={isEditDialogOpen}
+        setIsOpen={setIsEditDialogOpen}
+        project={editingProject}
+        setProject={setEditingProject}
+        clients={clients}
+        onUpdateProject={handleUpdateProject}
+        onDeleteProject={handleDeleteProject}
       />
 
       {isLoading ? (
@@ -269,9 +375,61 @@ export function ProjectTabs() {
                 <TabsTrigger 
                   key={project.id} 
                   value={project.id}
-                  className="px-4"
+                  className="px-4 group relative"
+                  onMouseEnter={() => setHoveredTab(project.id)}
+                  onMouseLeave={() => setHoveredTab(null)}
                 >
                   {project.name}
+                  {hoveredTab === project.id && (
+                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <div 
+                            className="h-7 w-7 p-0.5 inline-flex items-center justify-center rounded-sm hover:bg-accent cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-48 p-2">
+                          <div className="flex flex-col space-y-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="justify-start"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditDialog(project);
+                              }}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Modifier
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="justify-start text-destructive hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingProject({
+                                  id: project.id,
+                                  name: project.name,
+                                  description: project.description || "",
+                                  clientId: project.client_id,
+                                });
+                                handleDeleteProject(e);
+                              }}
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Supprimer
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
                 </TabsTrigger>
               ))}
               <TabsTrigger 

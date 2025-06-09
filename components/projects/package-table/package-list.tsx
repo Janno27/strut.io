@@ -1,38 +1,35 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Trash2, Edit, MoreVertical, Link as LinkIcon } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Link as LinkIcon } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-
-// Types
-export interface Package {
-  package_id: string;
-  package_name: string;
-  package_description: string | null;
-  package_status: string;
-  model_count: number;
-}
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
 
 interface Model {
   id: string;
   first_name: string;
   last_name: string;
-  gender: string;
+  gender: 'male' | 'female';
   height: number;
   bust: number;
   waist: number;
   hips: number;
-  main_image: string;
+}
+
+interface Package {
+  package_id: string;
+  package_name: string;
+  package_description?: string;
+  package_status: string;
 }
 
 interface PackageListProps {
@@ -51,13 +48,13 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
   useEffect(() => {
     async function loadPackageModels(packageId: string) {
       setIsLoading(prev => ({ ...prev, [packageId]: true }));
-      
+
       try {
         const { data, error } = await supabase
           .rpc('get_package_models', { package_uuid: packageId });
-          
+
         if (error) throw error;
-        
+
         setPackageModels(prev => ({
           ...prev,
           [packageId]: data || []
@@ -68,7 +65,7 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
         setIsLoading(prev => ({ ...prev, [packageId]: false }));
       }
     }
-    
+
     // Charger les mannequins pour chaque package
     packages.forEach(pkg => {
       loadPackageModels(pkg.package_id);
@@ -84,10 +81,10 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
       completed: "green",
       cancelled: "red"
     };
-    
+
     return statusMap[status] || "gray";
   };
-  
+
   // Traduire le statut en français
   const translateStatus = (status: string) => {
     const translations: Record<string, string> = {
@@ -97,62 +94,66 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
       completed: "Terminé",
       cancelled: "Annulé"
     };
-    
+
     return translations[status] || status;
   };
 
   if (packages.length === 0) {
     return (
-      <div className="text-center py-6 text-muted-foreground rounded-md border p-8">
+      <div className="text-center text-muted-foreground py-8">
         Aucun package pour ce projet. Cliquez sur "Nouveau package" pour en créer un.
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {packages.map((pkg) => (
-        <div key={`package-${pkg.package_id}`} className="space-y-2">
-          <div className="flex justify-between items-center px-1">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold">{pkg.package_name}</h3>
-                <Badge variant={getStatusColor(pkg.package_status) as any}>
+        <div key={pkg.package_id} className="space-y-3">
+          {/* En-tête avec titre, statut et menu */}
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2">
+                <h3 className="text-lg font-medium">{pkg.package_name}</h3>
+                <Badge variant="secondary" className={`bg-${getStatusColor(pkg.package_status)}-100 text-${getStatusColor(pkg.package_status)}-800`}>
                   {translateStatus(pkg.package_status)}
                 </Badge>
               </div>
               {pkg.package_description && (
-                <p className="text-sm text-muted-foreground">{pkg.package_description}</p>
+                <p className="text-sm text-muted-foreground">
+                  {pkg.package_description}
+                </p>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                title="Partager"
-                onClick={() => onSharePackage && onSharePackage(pkg.package_id)}
-              >
-                <LinkIcon className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                title="Modifier"
-                onClick={() => onEditPackage && onEditPackage(pkg.package_id)}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                title="Supprimer"
-                onClick={() => onDeletePackage && onDeletePackage(pkg.package_id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onSharePackage?.(pkg.package_id)}>
+                  <LinkIcon className="mr-2 h-4 w-4" />
+                  Partager
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEditPackage?.(pkg.package_id)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Modifier
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => onDeletePackage?.(pkg.package_id)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Supprimer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          
+
+          {/* Table avec bordure */}
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -165,17 +166,19 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
               <TableBody>
                 {isLoading[pkg.package_id] ? (
                   <TableRow key={`loading-${pkg.package_id}`}>
-                    <TableCell colSpan={3} className="text-center py-6">
+                    <TableCell colSpan={3} className="text-center">
                       Chargement des mannequins...
                     </TableCell>
                   </TableRow>
                 ) : packageModels[pkg.package_id]?.length ? (
-                  packageModels[pkg.package_id].map((model) => (
-                    <TableRow key={`model-${pkg.package_id}-${model.id}`}>
-                      <TableCell className="font-medium">
+                  packageModels[pkg.package_id].map((model, index) => (
+                    <TableRow key={`model-${pkg.package_id}-${index}-${model.id || 'undefined'}`}>
+                      <TableCell>
                         {model.first_name} {model.last_name}
                       </TableCell>
-                      <TableCell>{model.gender === 'male' ? 'Homme' : 'Femme'}</TableCell>
+                      <TableCell>
+                        {model.gender === 'male' ? 'Homme' : 'Femme'}
+                      </TableCell>
                       <TableCell>
                         {model.height}cm, {model.bust}-{model.waist}-{model.hips}
                       </TableCell>
@@ -183,7 +186,7 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
                   ))
                 ) : (
                   <TableRow key={`empty-${pkg.package_id}`}>
-                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={3} className="text-center text-muted-foreground">
                       Aucun mannequin sélectionné pour ce package.
                     </TableCell>
                   </TableRow>
@@ -195,4 +198,4 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
       ))}
     </div>
   );
-} 
+}

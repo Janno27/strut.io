@@ -93,8 +93,8 @@ export function ModelList() {
       
       if (data) {
         // Séparer les modèles par genre
-        const female = data.filter(model => model.gender === 'female');
-        const male = data.filter(model => model.gender === 'male');
+        const female = data.filter((model: any) => model.gender === 'female');
+        const male = data.filter((model: any) => model.gender === 'male');
         
         setFemaleModels(female);
         setMaleModels(male);
