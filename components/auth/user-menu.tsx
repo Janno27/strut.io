@@ -12,8 +12,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
-import { UserIcon, LogOut, Settings, User } from "lucide-react";
+import { UserIcon, LogOut, Settings, User, FolderKanban, Home, LayoutDashboard, LogIn, UserPlus } from "lucide-react";
 
 export function UserMenu() {
   const { user, profile, signOut } = useAuth();
@@ -25,22 +26,6 @@ export function UserMenu() {
     setIsLoading(false);
   };
 
-  // Si l'utilisateur n'est pas connecté, afficher le bouton de connexion
-  if (!user) {
-    return (
-      <div className="flex items-center gap-4">
-        <Link href="/login">
-          <Button variant="outline" size="sm">
-            Connexion
-          </Button>
-        </Link>
-        <Link href="/register">
-          <Button size="sm">Inscription</Button>
-        </Link>
-      </div>
-    );
-  }
-
   // Obtenir les initiales de l'utilisateur pour l'avatar
   const getInitials = () => {
     if (profile?.full_name) {
@@ -50,8 +35,11 @@ export function UserMenu() {
         .join("")
         .toUpperCase();
     }
-    return user.email?.substring(0, 2).toUpperCase() || "U";
+    return user?.email?.substring(0, 2).toUpperCase() || "U";
   };
+  
+  // Vérifier si l'utilisateur est admin ou agent
+  const isAdminOrAgent = profile && ['admin', 'agent'].includes(profile.role);
 
   return (
     <DropdownMenu>
@@ -62,42 +50,112 @@ export function UserMenu() {
           aria-label="Menu utilisateur"
         >
           <Avatar>
-            {profile?.avatar_url ? (
+            {user && profile?.avatar_url ? (
               <AvatarImage src={profile.avatar_url} alt={profile.full_name || user.email || ""} />
             ) : null}
-            <AvatarFallback>{getInitials()}</AvatarFallback>
+            <AvatarFallback>{user ? getInitials() : <UserIcon className="h-5 w-5" />}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{profile?.full_name || "Utilisateur"}</p>
-            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/profile" className="flex items-center cursor-pointer">
-            <User className="mr-2 h-4 w-4" />
-            <span>Profil</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/settings" className="flex items-center cursor-pointer">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Paramètres</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="cursor-pointer"
-          onClick={handleSignOut}
-          disabled={isLoading}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>{isLoading ? "Déconnexion..." : "Se déconnecter"}</span>
-        </DropdownMenuItem>
+      <DropdownMenuContent className="w-56" align="start" forceMount>
+        {user ? (
+          <>
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium leading-none">{profile?.full_name || "Utilisateur"}</p>
+                  {profile?.role && (
+                    <span className="text-xs capitalize px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
+                      {profile.role}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            
+            {/* Liens de navigation */}
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <Link href="/" className="flex items-center cursor-pointer">
+                  <Home className="mr-2 h-4 w-4" />
+                  <span>Accueil</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/projects" className="flex items-center cursor-pointer">
+                  <FolderKanban className="mr-2 h-4 w-4" />
+                  <span>Projets</span>
+                </Link>
+              </DropdownMenuItem>
+              {isAdminOrAgent && (
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard" className="flex items-center cursor-pointer">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    <span>Tableau de bord</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuGroup>
+            
+            <DropdownMenuSeparator />
+            
+            {/* Liens de compte */}
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <Link href="/account" className="flex items-center cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Mon compte</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="flex items-center cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Paramètres</span>
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            
+            <DropdownMenuSeparator />
+            
+            {/* Déconnexion */}
+            <DropdownMenuItem
+              className="text-red-500 cursor-pointer"
+              onClick={handleSignOut}
+              disabled={isLoading}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>{isLoading ? "Déconnexion..." : "Se déconnecter"}</span>
+            </DropdownMenuItem>
+          </>
+        ) : (
+          <>
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">Bienvenue</p>
+                <p className="text-xs leading-none text-muted-foreground">Connectez-vous pour accéder à toutes les fonctionnalités</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            
+            {/* Options de connexion et inscription */}
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <Link href="/login" className="flex items-center cursor-pointer">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  <span>Connexion</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/register" className="flex items-center cursor-pointer">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  <span>Inscription</span>
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

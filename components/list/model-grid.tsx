@@ -50,7 +50,8 @@ export function ModelGrid({
   onOpenAddModal,
   canEdit = false,
   onModelUpdated,
-  onModelDeleted
+  onModelDeleted,
+  isSharedView = false
 }: ModelGridProps) {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
   const [detailHeight, setDetailHeight] = useState(0)
@@ -72,8 +73,14 @@ export function ModelGrid({
 
   // Fonction pour sélectionner un modèle
   const handleSelectModel = (id: string) => {
-    setSelectedModelId(id);
-    onSelectModel(id);
+    if (isSharedView) {
+      // En mode shared view, on délègue entièrement la gestion au parent
+      onSelectModel(id);
+    } else {
+      // En mode normal, on gère aussi l'état local
+      setSelectedModelId(id);
+      onSelectModel(id);
+    }
   };
 
   // Mettre à jour la hauteur du détail pour le décalage
@@ -104,7 +111,7 @@ export function ModelGrid({
     <LayoutGroup>
       <div className="w-full">
         <AnimatePresence mode="sync">
-          {selectedModelId && selectedModel ? (
+          {selectedModelId && selectedModel && !isSharedView ? (
             <motion.div
               id="model-detail"
               key="detail"
@@ -132,27 +139,29 @@ export function ModelGrid({
         </AnimatePresence>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-2">
-          {models.filter(model => !selectedModelId || model.id !== selectedModelId).map((model, index) => {
+          {models
+            .filter(model => model && model.id && (!selectedModelId || model.id !== selectedModelId || isSharedView))
+            .map((model, index) => {
             // Calculer la position dans la grille
             const column = index % 3;
             const row = Math.floor(index / 3);
             
             return (
               <motion.div
-                key={model.id}
+                key={`model-${model.id}-${index}`}
                 layout
-                layoutId={`model-${model.id}`}
+                layoutId={`model-${model.id}-${index}`}
                 initial={false}
                 animate={{
-                  y: selectedModelId ? detailHeight : 0,
-                  opacity: selectedModelId ? 0.8 : 1,
-                  scale: selectedModelId ? 0.98 : 1,
+                  y: selectedModelId && !isSharedView ? detailHeight : 0,
+                  opacity: selectedModelId && !isSharedView ? 0.8 : 1,
+                  scale: selectedModelId && !isSharedView ? 0.98 : 1,
                 }}
                 transition={{
                   type: "spring",
                   stiffness: 300,
                   damping: 30,
-                  delay: selectedModelId ? column * 0.05 + row * 0.05 : 0,
+                  delay: selectedModelId && !isSharedView ? column * 0.05 + row * 0.05 : 0,
                 }}
                 className="mb-6"
               >
@@ -168,7 +177,7 @@ export function ModelGrid({
           })}
 
           {/* Carte d'ajout de modèle (uniquement pour les Admin/Agent) */}
-          {canAddModel && !selectedModelId && (
+          {canAddModel && (!selectedModelId || isSharedView) && (
             <motion.div
               layout
               layoutId="add-model-card"
