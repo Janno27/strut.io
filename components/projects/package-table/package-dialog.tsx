@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Search } from 'lucide-react';
 
 interface Model {
   id: string;
@@ -55,6 +57,17 @@ export function PackageDialog({
   onCreatePackage,
   isEditing = false
 }: PackageDialogProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filtrer les mannequins en fonction de la recherche
+  const filteredModels = models.filter(model => {
+    const fullName = `${model.first_name} ${model.last_name}`.toLowerCase();
+    const query = searchQuery.toLowerCase();
+    return fullName.includes(query) || 
+           model.first_name.toLowerCase().includes(query) || 
+           model.last_name.toLowerCase().includes(query);
+  });
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
@@ -107,14 +120,29 @@ export function PackageDialog({
 
           <div className="space-y-2">
             <Label>Sélectionner les mannequins</Label>
+            {models.length > 0 && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher un mannequin..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-8 text-sm bg-muted/30"
+                />
+              </div>
+            )}
             <div className="max-h-[200px] overflow-y-auto border rounded-md p-3 space-y-2">
               {models.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   Aucun mannequin disponible
                 </p>
+              ) : filteredModels.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aucun mannequin trouvé pour "{searchQuery}"
+                </p>
               ) : (
                 <div className="space-y-3">
-                  {models.map((model, index) => (
+                  {filteredModels.map((model, index) => (
                     <div key={`model-checkbox-${model.id || index}`} className="flex items-center space-x-2">
                       <Checkbox
                         id={`model-${model.id || index}`}

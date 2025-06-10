@@ -28,8 +28,8 @@ export async function middleware(req: NextRequest) {
   }
 
   // Routes publiques
-  const publicRoutes = ['/login', '/register']
-  const isPublicRoute = publicRoutes.includes(pathname)
+  const publicRoutes = ['/login', '/register', '/shared']
+  const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith('/shared')
 
   try {
     const supabase = createServerClient(

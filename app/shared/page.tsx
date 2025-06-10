@@ -1,10 +1,13 @@
 "use client"
 
 import { useEffect, useState, Suspense, useMemo } from "react"
+import { createPortal } from "react-dom"
 import { useSearchParams } from "next/navigation"
 import { createAnonymousClient } from "@/lib/supabase/anonymous"
 import { ModelTabs } from "../../components/list/model-tabs"
 import { ModelGrid } from "../../components/list/model-grid"
+import { WishlistDrawer } from "../../components/wishlist/wishlist-drawer"
+import { SharedHeader } from "../../components/layout/shared-header"
 
 // Type pour les modèles de la base de données
 interface Model {
@@ -37,6 +40,7 @@ interface PackageData {
 
 interface ProjectData {
   client_id: string
+  name: string
 }
 
 interface ClientData {
@@ -83,8 +87,19 @@ function SharedPageContent() {
   const [selectedTab, setSelectedTab] = useState<"female" | "male">("female")
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
   const [packageName, setPackageName] = useState<string>("")
+  const [projectName, setProjectName] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
   
+  // État pour la wishlist
+  const [favorites, setFavorites] = useState<string[]>([])
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  
+  // Effet pour marquer le composant comme monté (éviter les erreurs d'hydratation)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Charger les modèles de l'agent spécifié ou du package spécifié
   useEffect(() => {
     const fetchModels = async () => {
@@ -136,7 +151,7 @@ function SharedPageContent() {
             // Récupérer le projet associé au package
             const { data: projectData, error: projectError } = await supabase
               .from("projects")
-              .select("client_id")
+              .select("client_id, name")
               .eq("id", typedPackageData.project_id)
               .single()
               
@@ -175,6 +190,7 @@ function SharedPageContent() {
             // Le package appartient bien à l'agent
             console.log("Package trouvé:", typedPackageData.name)
             setPackageName(typedPackageData.name)
+            setProjectName(typedProjectData.name)
             
             // Récupérer les mannequins du package
             const { data: packageModels, error: packageModelsError } = await supabase
@@ -275,6 +291,47 @@ function SharedPageContent() {
     fetchModels()
   }, [agentId, packageId, supabase])
   
+  // Gestion de la wishlist
+  const handleToggleFavorite = (e: React.MouseEvent, modelId: string) => {
+    e.stopPropagation()
+    setFavorites(prev => {
+      if (prev.includes(modelId)) {
+        return prev.filter(id => id !== modelId)
+      } else {
+        return [...prev, modelId]
+      }
+    })
+  }
+
+  const handleRemoveFavorite = (modelId: string) => {
+    setFavorites(prev => prev.filter(id => id !== modelId))
+  }
+
+  // Obtenir les modèles favoris pour la wishlist
+  const getFavoriteModels = (): GridModel[] => {
+    const allModels = [...femaleModels, ...maleModels]
+    return allModels
+      .filter(model => favorites.includes(model.id))
+      .map(model => ({
+        id: model.id,
+        name: `${model.first_name} ${model.last_name}`,
+        age: model.age || 0,
+        height: model.height,
+        bust: model.bust,
+        waist: model.waist,
+        hips: model.hips,
+        imageUrl: model.main_image,
+        additionalImages: model.additional_images,
+        instagram: model.instagram,
+        description: model.description || "",
+        experience: [],
+        models_com_link: model.models_com_link,
+        shoe_size: model.shoe_size,
+        eye_color: model.eye_color,
+        hair_color: model.hair_color
+      }))
+  }
+
   // Transformer les modèles pour correspondre au format attendu par ModelGrid
   const formatModelsForGrid = (models: Model[]): GridModel[] => {
     return models.map(model => ({
@@ -311,6 +368,14 @@ function SharedPageContent() {
   
   return (
     <div className="w-full">
+      {mounted && document.getElementById('shared-header-container') && createPortal(
+        <SharedHeader 
+          onOpenWishlist={() => setIsWishlistOpen(true)}
+          wishlistCount={favorites.length}
+        />,
+        document.getElementById('shared-header-container')!
+      )}
+      
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <p>Chargement des modèles...</p>
@@ -321,41 +386,102 @@ function SharedPageContent() {
           <p className="text-muted-foreground mt-2">{error}</p>
         </div>
       ) : (
-        <ModelTabs
-          femaleContent={
-            <ModelGrid 
-              models={formatModelsForGrid(femaleModels)} 
-              favorites={[]}
-              onToggleFavorite={() => {}}
-              selectedModelId={selectedTab === "female" ? selectedModelId : null}
-              onSelectModel={(id) => setSelectedModelId(id)}
-              canAddModel={false}
-              onOpenAddModal={() => {}}
-              canEdit={false}
-              onModelUpdated={() => {}}
-              onModelDeleted={() => {}}
-            />
-          }
-          maleContent={
-            <ModelGrid 
-              models={formatModelsForGrid(maleModels)} 
-              favorites={[]}
-              onToggleFavorite={() => {}}
-              selectedModelId={selectedTab === "male" ? selectedModelId : null}
-              onSelectModel={(id) => setSelectedModelId(id)}
-              canAddModel={false}
-              onOpenAddModal={() => {}}
-              canEdit={false}
-              onModelUpdated={() => {}}
-              onModelDeleted={() => {}}
-            />
-          }
-          onChangeTab={(tab) => {
-            setSelectedTab(tab as "female" | "male")
-            setSelectedModelId(null)
-          }}
-        />
+        <>
+          <div className="relative mb-6">
+            {/* Titre du projet et package à gauche */}
+            <div className="absolute left-0 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+              {projectName && (
+                <span className="text-base md:text-lg font-light tracking-wide text-muted-foreground/70">
+                  {projectName}
+                </span>
+              )}
+              {projectName && packageName && (
+                <span className="text-muted-foreground/50">•</span>
+              )}
+              {packageName && (
+                <span className="text-xs md:text-sm font-normal tracking-wide text-muted-foreground/60">
+                  {packageName}
+                </span>
+              )}
+            </div>
+            
+            {/* Tabs au centre */}
+            <div className="flex justify-center">
+              <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+                <button
+                  onClick={() => {
+                    setSelectedTab("female")
+                    setSelectedModelId(null)
+                  }}
+                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+                    selectedTab === "female" 
+                      ? "bg-background text-foreground shadow-sm" 
+                      : "hover:bg-background/50"
+                  }`}
+                >
+                  Femme
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedTab("male")
+                    setSelectedModelId(null)
+                  }}
+                  className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+                    selectedTab === "male" 
+                      ? "bg-background text-foreground shadow-sm" 
+                      : "hover:bg-background/50"
+                  }`}
+                >
+                  Homme
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Contenu des onglets */}
+          <div>
+            {selectedTab === "female" && (
+              <ModelGrid 
+                models={formatModelsForGrid(femaleModels)} 
+                favorites={favorites}
+                onToggleFavorite={handleToggleFavorite}
+                selectedModelId={selectedModelId}
+                onSelectModel={(id) => setSelectedModelId(id)}
+                canAddModel={false}
+                onOpenAddModal={() => {}}
+                canEdit={false}
+                onModelUpdated={() => {}}
+                onModelDeleted={() => {}}
+              />
+            )}
+            {selectedTab === "male" && (
+              <ModelGrid 
+                models={formatModelsForGrid(maleModels)} 
+                favorites={favorites}
+                onToggleFavorite={handleToggleFavorite}
+                selectedModelId={selectedModelId}
+                onSelectModel={(id) => setSelectedModelId(id)}
+                canAddModel={false}
+                onOpenAddModal={() => {}}
+                canEdit={false}
+                onModelUpdated={() => {}}
+                onModelDeleted={() => {}}
+              />
+            )}
+          </div>
+        </>
       )}
+      
+      <WishlistDrawer
+        isOpen={isWishlistOpen}
+        onClose={() => setIsWishlistOpen(false)}
+        favorites={getFavoriteModels()}
+        onRemoveFavorite={handleRemoveFavorite}
+        onSelectModel={(id) => {
+          setSelectedModelId(id)
+          setIsWishlistOpen(false)
+        }}
+      />
     </div>
   )
 }
