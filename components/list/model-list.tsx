@@ -80,21 +80,12 @@ export function ModelList({ searchQuery = "" }: ModelListProps) {
     
     const searchTerm = query.toLowerCase();
     return models.filter(model => {
-      const fullName = `${model.first_name} ${model.last_name}`.toLowerCase();
-      const description = (model.description || "").toLowerCase();
-      const instagram = (model.instagram || "").toLowerCase();
-      const eyeColor = model.eye_color.toLowerCase();
-      const hairColor = model.hair_color.toLowerCase();
+      // Vérifier que le modèle et les propriétés essentielles existent
+      if (!model || !model.first_name || !model.last_name) return false;
       
-      return (
-        fullName.includes(searchTerm) ||
-        description.includes(searchTerm) ||
-        instagram.includes(searchTerm) ||
-        eyeColor.includes(searchTerm) ||
-        hairColor.includes(searchTerm) ||
-        model.age.toString().includes(searchTerm) ||
-        model.height.toString().includes(searchTerm)
-      );
+      const fullName = `${model.first_name} ${model.last_name}`.toLowerCase();
+      
+      return fullName.includes(searchTerm);
     });
   }, []);
 
