@@ -24,6 +24,7 @@ interface Model {
   shoe_size?: number
   eye_color?: string
   hair_color?: string
+  is_shortlisted?: boolean
 }
 
 export interface ModelGridProps {

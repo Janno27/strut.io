@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PackageList } from "./package-list";
 import { NewPackageButton } from "./new-package-button";
 import { PackageDialog } from "./package-dialog";
+import { PackageDuplicateDialog } from "./package-duplicate-dialog";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useToast } from "@/components/ui/use-toast";
 import { 
@@ -38,6 +39,8 @@ export function PackageTable({ projectId }: PackageTableProps) {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareLink, setShareLink] = useState("");
   const [sharePackageId, setSharePackageId] = useState<string | null>(null);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [packageToDuplicate, setPackageToDuplicate] = useState<any | null>(null);
   
   const { user } = useAuth();
   const supabase = createClient();
@@ -349,6 +352,32 @@ export function PackageTable({ projectId }: PackageTableProps) {
     });
   };
 
+  // Gérer la duplication d'un package
+  const handleDuplicatePackage = async (packageId: string) => {
+    try {
+      // Récupérer les détails du package à dupliquer
+      const { data: packageData, error: packageError } = await supabase
+        .from('packages')
+        .select('id, name, description, project_id')
+        .eq('id', packageId)
+        .single();
+
+      if (packageError) throw packageError;
+
+      if (packageData) {
+        setPackageToDuplicate(packageData);
+        setDuplicateDialogOpen(true);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération du package:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de récupérer les détails du package",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Ouvrir la boîte de dialogue pour un nouveau package
   const handleOpenDialog = () => {
     resetForm();
@@ -365,6 +394,7 @@ export function PackageTable({ projectId }: PackageTableProps) {
           onDeletePackage={handleDeletePackage}
           onEditPackage={handleEditPackage}
           onSharePackage={handleSharePackage}
+          onDuplicatePackage={handleDuplicatePackage}
         />
       )}
       
@@ -389,6 +419,18 @@ export function PackageTable({ projectId }: PackageTableProps) {
         onModelSelection={handleModelSelection}
         onCreatePackage={handleSavePackage}
         isEditing={!!editingPackageId}
+      />
+
+      <PackageDuplicateDialog
+        isOpen={duplicateDialogOpen}
+        onClose={() => {
+          setDuplicateDialogOpen(false);
+          setPackageToDuplicate(null);
+        }}
+        package={packageToDuplicate}
+        onSuccess={() => {
+          loadData(); // Recharger les données après duplication
+        }}
       />
     </div>
   );

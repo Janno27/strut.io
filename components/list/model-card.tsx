@@ -2,7 +2,8 @@
 
 import Image from "next/image"
 import { motion } from "framer-motion"
-import { Heart } from "lucide-react"
+import { Heart, Star } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
 interface ModelCardProps {
   model: {
@@ -14,6 +15,7 @@ interface ModelCardProps {
     waist: number
     hips: number
     imageUrl: string
+    is_shortlisted?: boolean
   }
   onClick: () => void
   isSelected: boolean
@@ -62,6 +64,23 @@ export function ModelCard({
             priority
           />
           
+          {/* Badge Shortlist */}
+          {model.is_shortlisted && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="absolute top-2 left-2 z-10"
+            >
+              <Badge 
+                variant="default" 
+                className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white border-0 font-medium text-xs px-2 py-1 shadow-lg"
+              >
+                <Star className="w-3 h-3 mr-1 fill-current" />
+                Shortlist
+              </Badge>
+            </motion.div>
+          )}
+
           <motion.button 
             className="absolute top-2 right-2 p-2 rounded-full bg-black/30 hover:bg-black/50 transition-colors z-10"
             onClick={(e) => {

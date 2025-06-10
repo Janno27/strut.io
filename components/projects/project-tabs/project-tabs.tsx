@@ -441,9 +441,9 @@ export function ProjectTabs() {
           )}
         </div>
         
-        <div className="flex-1 flex justify-end items-start pt-14">
+        <div className="flex-1 flex justify-end items-end">
           {activeTab && activeTab !== "new-project" && (
-            <div className="sticky top-2 z-10">
+            <div className="sticky bottom-2 z-10">
               <div id="new-package-button-container" />
             </div>
           )}

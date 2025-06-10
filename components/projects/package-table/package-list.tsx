@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2, Edit, MoreVertical, Link as LinkIcon } from 'lucide-react';
+import { Trash2, Edit, MoreVertical, Link as LinkIcon, Copy } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -37,9 +37,10 @@ interface PackageListProps {
   onDeletePackage?: (packageId: string) => void;
   onEditPackage?: (packageId: string) => void;
   onSharePackage?: (packageId: string) => void;
+  onDuplicatePackage?: (packageId: string) => void;
 }
 
-export function PackageList({ packages, onDeletePackage, onEditPackage, onSharePackage }: PackageListProps) {
+export function PackageList({ packages, onDeletePackage, onEditPackage, onSharePackage, onDuplicatePackage }: PackageListProps) {
   const [packageModels, setPackageModels] = useState<{ [key: string]: Model[] }>({});
   const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
   const supabase = createClient();
@@ -136,6 +137,10 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
                 <DropdownMenuItem onClick={() => onSharePackage?.(pkg.package_id)}>
                   <LinkIcon className="mr-2 h-4 w-4" />
                   Partager
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onDuplicatePackage?.(pkg.package_id)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Itérer
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onEditPackage?.(pkg.package_id)}>
                   <Edit className="mr-2 h-4 w-4" />

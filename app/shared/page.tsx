@@ -30,6 +30,7 @@ interface Model {
   description?: string
   agent_id: string
   created_at: string
+  is_shortlisted?: boolean
 }
 
 // Type pour le retour de l'API Supabase
@@ -49,6 +50,7 @@ interface ClientData {
 
 interface PackageModelData {
   model_id: string
+  is_shortlisted?: boolean
 }
 
 // Type pour les modèles utilisés dans la grille
@@ -69,6 +71,7 @@ interface GridModel {
   shoe_size?: number
   eye_color?: string
   hair_color?: string
+  is_shortlisted?: boolean
 }
 
 // Composant qui utilise useSearchParams
@@ -89,6 +92,7 @@ function SharedPageContent() {
   const [packageName, setPackageName] = useState<string>("")
   const [projectName, setProjectName] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
+  const [hasAutoSelectedTab, setHasAutoSelectedTab] = useState(false)
   
   // État pour la wishlist
   const [favorites, setFavorites] = useState<string[]>([])
@@ -100,6 +104,51 @@ function SharedPageContent() {
     setMounted(true)
   }, [])
 
+  // Fonctions pour gérer le localStorage des favorites
+  const getFavoritesStorageKey = () => {
+    // Utiliser le packageId s'il existe, sinon l'agentId
+    return packageId ? `favorites_package_${packageId}` : `favorites_agent_${agentId}`
+  }
+
+  const loadFavoritesFromStorage = () => {
+    if (typeof window === 'undefined') return []
+    
+    try {
+      const storageKey = getFavoritesStorageKey()
+      const stored = localStorage.getItem(storageKey)
+      return stored ? JSON.parse(stored) : []
+    } catch (error) {
+      console.error('Erreur lors du chargement des favorites depuis le localStorage:', error)
+      return []
+    }
+  }
+
+  const saveFavoritesToStorage = (favorites: string[]) => {
+    if (typeof window === 'undefined') return
+    
+    try {
+      const storageKey = getFavoritesStorageKey()
+      localStorage.setItem(storageKey, JSON.stringify(favorites))
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde des favorites dans le localStorage:', error)
+    }
+  }
+
+  // Charger les favorites depuis le localStorage lors du changement de package/agent
+  useEffect(() => {
+    if (mounted && (packageId || agentId)) {
+      const storedFavorites = loadFavoritesFromStorage()
+      setFavorites(storedFavorites)
+    }
+  }, [mounted, packageId, agentId])
+
+  // Sauvegarder automatiquement les favorites dans le localStorage
+  useEffect(() => {
+    if (mounted && (packageId || agentId)) {
+      saveFavoritesToStorage(favorites)
+    }
+  }, [favorites, mounted, packageId, agentId])
+
   // Charger les modèles de l'agent spécifié ou du package spécifié
   useEffect(() => {
     const fetchModels = async () => {
@@ -108,6 +157,7 @@ function SharedPageContent() {
       try {
         setLoading(true)
         setError(null)
+        setHasAutoSelectedTab(false) // Réinitialiser pour permettre une nouvelle auto-sélection
         
         // Si un packageId est fourni, essayer de charger ce package spécifique
         if (packageId) {
@@ -192,10 +242,10 @@ function SharedPageContent() {
             setPackageName(typedPackageData.name)
             setProjectName(typedProjectData.name)
             
-            // Récupérer les mannequins du package
+            // Récupérer les mannequins du package avec les informations de shortlist
             const { data: packageModels, error: packageModelsError } = await supabase
               .from("package_models")
-              .select("model_id")
+              .select("model_id, is_shortlisted")
               .eq("package_id", packageId)
               
             if (packageModelsError) {
@@ -238,9 +288,21 @@ function SharedPageContent() {
             // Typer correctement les données des modèles
             const typedModelsData = modelsData as unknown as Model[]
             
+            // Créer un map pour les informations de shortlist
+            const shortlistMap = new Map<string, boolean>()
+            typedPackageModels.forEach(pm => {
+              shortlistMap.set(pm.model_id, pm.is_shortlisted || false)
+            })
+            
+            // Ajouter les informations de shortlist aux modèles
+            const modelsWithShortlist = typedModelsData.map(model => ({
+              ...model,
+              is_shortlisted: shortlistMap.get(model.id) || false
+            }))
+            
             // Séparer les modèles par genre
-            const female = typedModelsData.filter(model => model.gender === "female")
-            const male = typedModelsData.filter(model => model.gender === "male")
+            const female = modelsWithShortlist.filter(model => model.gender === "female")
+            const male = modelsWithShortlist.filter(model => model.gender === "male")
             
             setFemaleModels(female as Model[])
             setMaleModels(male as Model[])
@@ -290,6 +352,20 @@ function SharedPageContent() {
     
     fetchModels()
   }, [agentId, packageId, supabase])
+
+  // Auto-sélection de l'onglet en fonction du contenu
+  useEffect(() => {
+    if (!loading && !hasAutoSelectedTab && (femaleModels.length > 0 || maleModels.length > 0)) {
+      // Par défaut, on privilégie "female"
+      // Mais si "female" est vide ou a moins de modèles que "male", on sélectionne "male"
+      if (femaleModels.length === 0 || (maleModels.length > 0 && maleModels.length > femaleModels.length)) {
+        setSelectedTab("male")
+      } else {
+        setSelectedTab("female")
+      }
+      setHasAutoSelectedTab(true)
+    }
+  }, [loading, femaleModels.length, maleModels.length, hasAutoSelectedTab])
   
   // Gestion de la wishlist
   const handleToggleFavorite = (e: React.MouseEvent, modelId: string) => {
@@ -350,7 +426,8 @@ function SharedPageContent() {
       models_com_link: model.models_com_link,
       shoe_size: model.shoe_size,
       eye_color: model.eye_color,
-      hair_color: model.hair_color
+      hair_color: model.hair_color,
+      is_shortlisted: model.is_shortlisted || false
     }))
   }
   
