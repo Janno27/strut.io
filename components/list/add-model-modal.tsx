@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Upload, X } from "lucide-react"
 import Image from "next/image"
 import { useAuth } from "@/lib/auth/auth-provider"
+import { DraggableImageGrid } from "@/components/ui/draggable-image-grid"
+import { MainImageUploader } from "@/components/ui/main-image-uploader"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 
@@ -134,6 +136,18 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
     
     setAdditionalImages(prev => prev.filter((_, i) => i !== index))
     setAdditionalImageFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // Réorganiser les images supplémentaires
+  const handleAdditionalImagesReorder = (newImages: string[]) => {
+    // Créer un nouvel ordre pour les fichiers basé sur l'ordre des URLs
+    const newFiles = newImages.map(imageUrl => {
+      const index = additionalImages.findIndex(img => img === imageUrl)
+      return additionalImageFiles[index]
+    }).filter(Boolean)
+    
+    setAdditionalImages(newImages)
+    setAdditionalImageFiles(newFiles)
   }
 
   // Télécharger les images sur Supabase Storage et récupérer les URLs publiques
@@ -324,44 +338,14 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
             {/* Image principale */}
             <div className="space-y-2">
               <Label>Photo principale</Label>
-              <div className="border rounded-lg p-2 h-80 flex flex-col items-center justify-center relative">
-                {mainImage ? (
-                  <div className="relative w-full h-full">
-                    <Image
-                      src={mainImage}
-                      alt="Photo principale"
-                      fill
-                      className="object-cover rounded-lg"
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2"
-                      onClick={() => {
-                        setMainImage(null)
-                        setMainImageFile(null)
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex flex-col items-center justify-center text-center">
-                      <Upload className="h-10 w-10 mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">Cliquez pour télécharger une photo</p>
-                    </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                      onChange={handleMainImageUpload}
-                    />
-                  </>
-                )}
-              </div>
+              <MainImageUploader
+                image={mainImage}
+                onImageUpload={handleMainImageUpload}
+                onImageRemove={() => {
+                  setMainImage(null)
+                  setMainImageFile(null)
+                }}
+              />
             </div>
             
             {/* Informations personnelles */}
@@ -374,7 +358,6 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
-                    required
                   />
                 </div>
                 
@@ -427,7 +410,6 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                     type="number"
                     value={formData.height}
                     onChange={handleChange}
-                    required
                   />
                 </div>
                 
@@ -439,7 +421,6 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                     type="number"
                     value={formData.bust}
                     onChange={handleChange}
-                    required
                   />
                 </div>
               </div>
@@ -453,7 +434,6 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                     type="number"
                     value={formData.waist}
                     onChange={handleChange}
-                    required
                   />
                 </div>
                 
@@ -465,7 +445,6 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                     type="number"
                     value={formData.hips}
                     onChange={handleChange}
-                    required
                   />
                 </div>
               </div>
@@ -587,40 +566,14 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
             {/* Images supplémentaires */}
             <div className="md:col-span-3 space-y-2">
               <Label>Photos supplémentaires</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {additionalImages.map((image, index) => (
-                  <div key={index} className="relative h-40 border rounded-lg overflow-hidden">
-                    <Image
-                      src={image}
-                      alt={`Photo supplémentaire ${index + 1}`}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 20vw"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2"
-                      onClick={() => removeAdditionalImage(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                
-                <div className="relative h-40 border rounded-lg flex flex-col items-center justify-center cursor-pointer">
-                  <Plus className="h-8 w-8 mb-1 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">Ajouter plusieurs photos</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    onChange={handleAdditionalImageUpload}
-                  />
-                </div>
-              </div>
+              <DraggableImageGrid
+                images={additionalImages}
+                onImagesChange={handleAdditionalImagesReorder}
+                onImageAdd={handleAdditionalImageUpload}
+                onImageRemove={removeAdditionalImage}
+                allowMultiple={true}
+                maxImages={10}
+              />
             </div>
           </div>
           

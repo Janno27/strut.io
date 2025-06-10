@@ -13,6 +13,8 @@ import { ImageModal } from "./image-modal"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight, X, Upload, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { DraggableImageGrid } from "@/components/ui/draggable-image-grid"
+import { Label } from "@/components/ui/label"
 
 export function ModelDetail({ 
   model, 
@@ -49,6 +51,7 @@ export function ModelDetail({
   const [tempMainImage, setTempMainImage] = useState<string | null>(null)
   const [tempAdditionalImages, setTempAdditionalImages] = useState<string[]>([])
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
+  const [imageOrder, setImageOrder] = useState<string[]>([])
   
   const supabase = createClient()
   
@@ -74,10 +77,11 @@ export function ModelDetail({
         description: model.description || ""
       })
       
-      // Initialiser les images temporaires
+      // Initialiser les images temporaires et l'ordre
       setTempMainImage(null)
       setTempAdditionalImages([])
       setImagesToDelete([])
+      setImageOrder(model.additionalImages || [])
     }
   }, [model, firstName, lastName])
 
@@ -124,6 +128,7 @@ export function ModelDetail({
     setMainImageFile(null)
     setAdditionalImageFiles([])
     setImagesToDelete([])
+    setImageOrder(model.additionalImages || [])
   }
   
   // Télécharger les nouvelles images
@@ -168,23 +173,44 @@ export function ModelDetail({
       newAdditionalImageUrls.push(additionalImageData.publicUrl);
     }
     
-    // Supprimer les images marquées pour suppression
-    for (const imageUrl of imagesToDelete) {
-      const filePath = imageUrl.split('/').pop();
-      if (filePath) {
-        await supabase.storage
-          .from('models')
-          .remove([filePath]);
-          
-        // Retirer l'URL de la liste des images supplémentaires
-        const index = newAdditionalImageUrls.indexOf(imageUrl);
-        if (index > -1) {
-          newAdditionalImageUrls.splice(index, 1);
+          // Supprimer les images marquées pour suppression
+      for (const imageUrl of imagesToDelete) {
+        const filePath = imageUrl.split('/').pop();
+        if (filePath) {
+          await supabase.storage
+            .from('models')
+            .remove([filePath]);
+            
+          // Retirer l'URL de la liste des images supplémentaires
+          const index = newAdditionalImageUrls.indexOf(imageUrl);
+          if (index > -1) {
+            newAdditionalImageUrls.splice(index, 1);
+          }
         }
       }
-    }
+      
+      // Réorganiser selon l'ordre défini
+      const finalOrderedImages = imageOrder
+        .filter(img => !imagesToDelete.includes(img)) // Exclure les supprimées
+        .map(img => {
+          // Si c'est une image existante, garder l'URL
+          if ((model.additionalImages || []).includes(img)) {
+            return img;
+          }
+          // Si c'est une nouvelle image temporaire, utiliser la nouvelle URL
+          const tempIndex = tempAdditionalImages.indexOf(img);
+          if (tempIndex >= 0 && tempIndex < newAdditionalImageUrls.length - (model.additionalImages || []).length) {
+            return newAdditionalImageUrls[(model.additionalImages || []).length + tempIndex];
+          }
+          return img;
+        })
+        .filter(Boolean);
+      
+      // Ajouter les nouvelles images qui ne sont pas dans l'ordre
+      const remainingNewImages = newAdditionalImageUrls.filter(url => !finalOrderedImages.includes(url));
+      const finalImageUrls = [...finalOrderedImages, ...remainingNewImages];
     
-    return { newMainImageUrl, newAdditionalImageUrls };
+          return { newMainImageUrl, newAdditionalImageUrls: finalImageUrls };
   };
   
   const handleSaveEdit = async () => {
@@ -377,6 +403,72 @@ export function ModelDetail({
     }
   }
 
+  // Nouvelles fonctions pour la gestion des images avec drag & drop
+  const handleMainImageRemove = () => {
+    setTempMainImage(null)
+    setMainImageFile(null)
+  }
+
+  const handleAdditionalImageAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const newImageUrls = files.map(file => URL.createObjectURL(file))
+    
+    setAdditionalImageFiles(prev => [...prev, ...files])
+    setTempAdditionalImages(prev => [...prev, ...newImageUrls])
+    
+    // Ajouter les nouvelles images à l'ordre
+    setImageOrder(prev => [...prev, ...newImageUrls])
+    
+    // Réinitialiser l'input
+    e.target.value = ""
+  }
+
+  const handleAdditionalImageRemoveByIndex = (index: number) => {
+    const allImages = getAllAdditionalImages()
+    const imageToRemove = allImages[index]
+    
+    if (tempAdditionalImages.includes(imageToRemove)) {
+      // Image temporaire
+      const tempIndex = tempAdditionalImages.indexOf(imageToRemove)
+      setTempAdditionalImages(prev => prev.filter((_, i) => i !== tempIndex))
+      setAdditionalImageFiles(prev => prev.filter((_, i) => i !== tempIndex))
+      URL.revokeObjectURL(imageToRemove)
+    } else if ((model.additionalImages || []).includes(imageToRemove)) {
+      // Image existante
+      setImagesToDelete(prev => [...prev, imageToRemove])
+    }
+    
+    // Retirer de l'ordre
+    setImageOrder(prev => prev.filter(img => img !== imageToRemove))
+  }
+
+  const handleAdditionalImagesReorder = (newImages: string[]) => {
+    // Mettre à jour l'ordre complet des images
+    setImageOrder(newImages.filter(img => !imagesToDelete.includes(img)))
+    
+    // Séparer les images existantes des temporaires dans le nouvel ordre
+    const existingImages = newImages.filter(img => (model.additionalImages || []).includes(img))
+    const tempImages = newImages.filter(img => tempAdditionalImages.includes(img))
+    
+    // Réorganiser les fichiers correspondants aux images temporaires
+    const newFiles = tempImages.map(imageUrl => {
+      const index = tempAdditionalImages.findIndex(img => img === imageUrl)
+      return additionalImageFiles[index]
+    }).filter(Boolean)
+    
+    // Mettre à jour les images temporaires dans le bon ordre
+    setTempAdditionalImages(tempImages)
+    setAdditionalImageFiles(newFiles)
+  }
+
+  // Créer la liste complète des images supplémentaires pour le drag & drop
+  const getAllAdditionalImages = () => {
+    // Utiliser l'ordre défini, filtrer les images supprimées, et ajouter les nouvelles temporaires
+    const orderedExistingImages = imageOrder.filter(img => !imagesToDelete.includes(img))
+    const newTempImages = tempAdditionalImages.filter(img => !imageOrder.includes(img))
+    return [...orderedExistingImages, ...newTempImages]
+  }
+
   // Séparer les images additionnelles pour l'affichage
   const additionalImages = model.additionalImages || []
   // Filtrer les images qui sont marquées pour suppression
@@ -478,6 +570,8 @@ export function ModelDetail({
                 isLoading={isLoading}
                 onChange={handleChange}
                 onSelectChange={handleSelectChange}
+                // Gestion des images désactivée (gérée séparément)
+                showImageManagement={false}
               />
             ) : (
               <ModelInfo
@@ -491,32 +585,16 @@ export function ModelDetail({
       </div>
       
       {/* Images additionnelles */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <div className="space-y-2">
         {!isEditing ? (
           // Mode affichage
-          displayAdditionalImages.map((imageUrl, index) => (
-            <div 
-              key={index} 
-              className="rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-              onClick={() => handleImageClick(imageUrl, index)}
-            >
-              <div className="relative aspect-square">
-                <Image
-                  src={imageUrl}
-                  alt={`${model.name} - photo ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 25vw"
-                />
-              </div>
-            </div>
-          ))
-        ) : (
-          // Mode édition
-          <>
-            {/* Images existantes */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {displayAdditionalImages.map((imageUrl, index) => (
-              <div key={index} className="rounded-xl overflow-hidden relative">
+              <div 
+                key={index} 
+                className="rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => handleImageClick(imageUrl, index)}
+              >
                 <div className="relative aspect-square">
                   <Image
                     src={imageUrl}
@@ -525,54 +603,22 @@ export function ModelDetail({
                     className="object-cover"
                     sizes="(max-width: 768px) 100vw, 25vw"
                   />
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2 z-10"
-                    onClick={() => handleRemoveAdditionalImage(imageUrl, index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
             ))}
-            
-            {/* Images temporaires */}
-            {tempAdditionalImages.map((imageUrl, index) => (
-              <div key={`temp-${index}`} className="rounded-xl overflow-hidden relative">
-                <div className="relative aspect-square">
-                  <Image
-                    src={imageUrl}
-                    alt={`Nouvelle photo ${index + 1}`}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 25vw"
-                  />
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-2 right-2 z-10"
-                    onClick={() => handleRemoveAdditionalImage(imageUrl, index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            
-            {/* Bouton d'ajout */}
-            <div className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center aspect-square cursor-pointer hover:border-primary transition-colors">
-              <label className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
-                <Plus className="h-8 w-8 mb-2 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Ajouter une photo</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAdditionalImageUpload}
-                />
-              </label>
-            </div>
+          </div>
+        ) : (
+          // Mode édition avec drag & drop
+          <>
+            <Label>Photos supplémentaires</Label>
+            <DraggableImageGrid
+              images={getAllAdditionalImages()}
+              onImagesChange={handleAdditionalImagesReorder}
+              onImageAdd={handleAdditionalImageAdd}
+              onImageRemove={handleAdditionalImageRemoveByIndex}
+              allowMultiple={true}
+              maxImages={10}
+            />
           </>
         )}
       </div>

@@ -78,6 +78,16 @@ export interface ModelEditFormProps {
   isLoading: boolean
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
   onSelectChange: (value: string, name: string) => void
+  // Gestion des images
+  mainImage?: string | null
+  additionalImages?: string[]
+  onMainImageUpload?: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onMainImageRemove?: () => void
+  onMainImageEdit?: () => void
+  onAdditionalImagesChange?: (images: string[]) => void
+  onAdditionalImageAdd?: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onAdditionalImageRemove?: (index: number) => void
+  showImageManagement?: boolean
 }
 
 export interface ImageGalleryProps {
