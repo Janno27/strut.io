@@ -114,7 +114,7 @@ export function ModelCard({
           {firstName} {lastName}
         </div>
         <div className="text-sm text-muted-foreground mt-0.5">
-          {model.age} • {model.height} • {model.bust}/{model.waist}/{model.hips}
+          {model.age || "-"} • {model.height} • {model.bust}/{model.waist}/{model.hips}
         </div>
       </div>
     </motion.div>

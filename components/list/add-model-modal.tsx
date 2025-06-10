@@ -374,6 +374,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
+                    required
                   />
                 </div>
                 
@@ -479,7 +480,6 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                     step="0.5"
                     value={formData.shoeSize}
                     onChange={handleChange}
-                    required
                   />
                 </div>
               </div>
