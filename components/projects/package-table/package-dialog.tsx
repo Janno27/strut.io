@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { SearchBar } from '@/components/ui/search-bar';
 import { Search } from 'lucide-react';
 
 interface Model {
@@ -58,6 +59,7 @@ export function PackageDialog({
   isEditing = false
 }: PackageDialogProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Filtrer les mannequins en fonction de la recherche
   const filteredModels = models.filter(model => {
@@ -68,8 +70,29 @@ export function PackageDialog({
            model.last_name.toLowerCase().includes(query);
   });
 
+  const handleSearchToggle = () => {
+    setIsSearchOpen(!isSearchOpen);
+    // Si on ferme la recherche, on annule la recherche
+    if (isSearchOpen) {
+      setSearchQuery('');
+    }
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  const handleClose = (open: boolean) => {
+    setIsOpen(open);
+    // Réinitialiser la recherche quand on ferme la dialog
+    if (!open) {
+      setSearchQuery('');
+      setIsSearchOpen(false);
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -119,18 +142,17 @@ export function PackageDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Sélectionner les mannequins</Label>
-            {models.length > 0 && (
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
+            <div className="flex items-center space-x-2">
+              <Label>Sélectionner les mannequins</Label>
+              {models.length > 0 && (
+                <SearchBar 
+                  isOpen={isSearchOpen}
+                  onToggle={handleSearchToggle}
+                  onSearch={handleSearch}
                   placeholder="Rechercher un mannequin..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-8 text-sm bg-muted/30"
                 />
-              </div>
-            )}
+              )}
+            </div>
             <div className="max-h-[200px] overflow-y-auto border rounded-md p-3 space-y-2">
               {models.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -164,7 +186,7 @@ export function PackageDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+          <Button type="button" variant="outline" onClick={() => handleClose(false)}>
             Annuler
           </Button>
           <Button type="button" onClick={onCreatePackage}>
