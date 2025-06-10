@@ -7,7 +7,7 @@ export default function ProjectsPage() {
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="max-w-5xl mx-auto">
           <div className="mb-12">
-            <Header />
+            <Header showSearch={false} />
           </div>
           
           <ProjectTabs />

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { ModelTabs } from "./model-tabs"
 import { ModelGrid } from "./model-grid"
 import { WishlistDrawer } from "../wishlist/wishlist-drawer"
@@ -51,7 +51,11 @@ interface GridModel {
   experience?: string[]
 }
 
-export function ModelList() {
+interface ModelListProps {
+  searchQuery?: string
+}
+
+export function ModelList({ searchQuery = "" }: ModelListProps) {
   // État pour la wishlist
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
@@ -69,6 +73,41 @@ export function ModelList() {
 
   // Vérifier si l'utilisateur peut ajouter un modèle (Admin ou Agent)
   const canAddModel = profile?.role === 'admin' || profile?.role === 'agent';
+
+  // Fonction pour filtrer les modèles selon la recherche
+  const filterModelsBySearch = useCallback((models: Model[], query: string): Model[] => {
+    if (!query.trim()) return models;
+    
+    const searchTerm = query.toLowerCase();
+    return models.filter(model => {
+      const fullName = `${model.first_name} ${model.last_name}`.toLowerCase();
+      const description = (model.description || "").toLowerCase();
+      const instagram = (model.instagram || "").toLowerCase();
+      const eyeColor = model.eye_color.toLowerCase();
+      const hairColor = model.hair_color.toLowerCase();
+      
+      return (
+        fullName.includes(searchTerm) ||
+        description.includes(searchTerm) ||
+        instagram.includes(searchTerm) ||
+        eyeColor.includes(searchTerm) ||
+        hairColor.includes(searchTerm) ||
+        model.age.toString().includes(searchTerm) ||
+        model.height.toString().includes(searchTerm)
+      );
+    });
+  }, []);
+
+  // Modèles filtrés par la recherche
+  const filteredFemaleModels = useMemo(() => 
+    filterModelsBySearch(femaleModels, searchQuery), 
+    [femaleModels, searchQuery, filterModelsBySearch]
+  );
+  
+  const filteredMaleModels = useMemo(() => 
+    filterModelsBySearch(maleModels, searchQuery), 
+    [maleModels, searchQuery, filterModelsBySearch]
+  );
 
   // Fonction pour charger les modèles (rendue réutilisable)
   const fetchModels = useCallback(async () => {
@@ -172,8 +211,8 @@ export function ModelList() {
     fetchModels();
   };
 
-  // Obtenir les modèles favoris complets
-  const allModels = [...femaleModels, ...maleModels];
+  // Obtenir les modèles favoris complets (utiliser les modèles filtrés)
+  const allModels = [...filteredFemaleModels, ...filteredMaleModels];
   
   // Vérifier si l'utilisateur peut modifier/supprimer un modèle
   const canEdit: boolean = Boolean(
@@ -205,9 +244,10 @@ export function ModelList() {
     }));
   };
   
-  // Récupérer les modèles favoris au format grid
+  // Récupérer les modèles favoris au format grid (utiliser tous les modèles non filtrés pour les favoris)
+  const allUnfilteredModels = [...femaleModels, ...maleModels];
   const favoriteModels = formatModelsForGrid(
-    allModels.filter(model => favorites.includes(model.id))
+    allUnfilteredModels.filter(model => favorites.includes(model.id))
   );
 
   // Gérer l'ouverture de la modale d'ajout
@@ -259,10 +299,19 @@ export function ModelList() {
         <ModelSkeleton />
       ) : (
         <>
+          {/* Afficher un message si la recherche ne donne aucun résultat */}
+          {searchQuery && filteredFemaleModels.length === 0 && filteredMaleModels.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                Aucun mannequin trouvé pour "{searchQuery}"
+              </p>
+            </div>
+          )}
+          
           <ModelTabs
             femaleContent={
               <ModelGrid 
-                models={formatModelsForGrid(femaleModels)} 
+                models={formatModelsForGrid(filteredFemaleModels)} 
                 favorites={favorites}
                 onToggleFavorite={handleToggleFavorite}
                 selectedModelId={selectedTab === "female" ? selectedModelId : null}
@@ -276,7 +325,7 @@ export function ModelList() {
             }
             maleContent={
               <ModelGrid 
-                models={formatModelsForGrid(maleModels)} 
+                models={formatModelsForGrid(filteredMaleModels)} 
                 favorites={favorites}
                 onToggleFavorite={handleToggleFavorite}
                 selectedModelId={selectedTab === "male" ? selectedModelId : null}
