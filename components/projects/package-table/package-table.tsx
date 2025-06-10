@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PackageList } from "./package-list";
 import { NewPackageButton } from "./new-package-button";
 import { PackageDialog } from "./package-dialog";
-import { useAuth } from "@/lib/context/auth-context";
+import { useAuth } from "@/lib/auth/auth-provider";
 import { useToast } from "@/components/ui/use-toast";
 import { 
   Dialog, 

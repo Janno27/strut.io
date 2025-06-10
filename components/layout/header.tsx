@@ -1,15 +1,12 @@
 "use client"
 
-import Link from "next/link"
 import { useState } from "react"
-import { Link as LinkIcon, Copy, Check } from "lucide-react"
+import { Link as LinkIcon, Check } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { UserMenu } from "@/components/auth/user-menu"
-import { useAuth } from "@/lib/context/auth-context"
-import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth/auth-provider"
 import { toast } from "sonner"
 
 export function Header() {

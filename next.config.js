@@ -1,27 +1,34 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    // TEMPORAIRE : Permet le déploiement même avec des erreurs ESLint
-    ignoreDuringBuilds: true,
+  experimental: {
+    // Configuration pour les Server Components et Supabase
+    serverComponentsExternalPackages: ['@supabase/supabase-js', '@supabase/ssr']
   },
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'dcshynhkrzwdkizaaiks.supabase.co',
+        hostname: '*.supabase.co',
         port: '',
-        pathname: '/**',
+        pathname: '/storage/v1/object/public/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'localhost',
+        port: '3000',
+        pathname: '/**',
+      }
     ],
   },
-  experimental: {
-    serverActions: {
-      allowedOrigins: [
-        process.env.NEXT_PUBLIC_SITE_URL || 'localhost:3001',
-        process.env.NEXT_PUBLIC_VERCEL_URL,
-      ].filter(Boolean),
-    },
+  env: {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
   },
+  // Configuration pour la production
+  output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+  
+  // Configuration des en-têtes de sécurité
   async headers() {
     return [
       {
@@ -29,20 +36,48 @@ const nextConfig = {
         headers: [
           {
             key: 'X-Frame-Options',
-            value: 'DENY',
+            value: 'DENY'
           },
           {
             key: 'X-Content-Type-Options',
-            value: 'nosniff',
+            value: 'nosniff'
           },
           {
             key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
+            value: 'origin-when-cross-origin'
           },
-        ],
-      },
-    ];
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()'
+          }
+        ]
+      }
+    ]
   },
-};
 
-module.exports = nextConfig;
+  // Configuration des redirections si nécessaire
+  async redirects() {
+    return [
+      {
+        source: '/dashboard',
+        destination: '/',
+        permanent: false,
+      },
+    ]
+  },
+
+  // Configuration pour optimiser les builds
+  swcMinify: true,
+  
+  // Configuration TypeScript stricte
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  
+  // Configuration ESLint
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+}
+
+module.exports = nextConfig

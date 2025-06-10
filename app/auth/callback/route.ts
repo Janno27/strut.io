@@ -11,16 +11,32 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error) {
+      // Construire l'URL de redirection de façon plus robuste
       const forwardedHost = request.headers.get('x-forwarded-host')
+      const forwardedProto = request.headers.get('x-forwarded-proto')
       const isLocalEnv = process.env.NODE_ENV === 'development'
       
+      let redirectUrl: string
+      
       if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}${next}`)
+        redirectUrl = `${origin}${next}`
       } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`)
+        const protocol = forwardedProto || 'https'
+        redirectUrl = `${protocol}://${forwardedHost}${next}`
       } else {
-        return NextResponse.redirect(`${origin}${next}`)
+        redirectUrl = `${origin}${next}`
       }
+
+      // Créer une réponse avec redirection et cookies appropriés
+      const response = NextResponse.redirect(redirectUrl)
+      
+      // S'assurer que les cookies sont correctement configurés pour la production
+      if (!isLocalEnv) {
+        response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+        response.headers.set('Pragma', 'no-cache')
+      }
+      
+      return response
     }
   }
 

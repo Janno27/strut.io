@@ -14,7 +14,9 @@ export function createClient() {
     {
       auth: {
         persistSession: true,
-        storageKey: 'supabase-auth-storage-key', // Clé de stockage distincte
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce',
       }
     }
   )

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/context/auth-context";
+import { useAuth } from "@/lib/auth/auth-provider";
 import { createClient } from "@/lib/supabase/client";
 import { ClientSelector } from "./client-selector";
 import { ClientDialog } from "./client-dialog";

@@ -1,62 +1,90 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/context/auth-context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth/auth-provider'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertCircle, Loader2 } from 'lucide-react'
 
 export function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const { signIn } = useAuth();
-  const router = useRouter();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { signIn, user, loading } = useAuth()
+  const router = useRouter()
+
+  // Rediriger si l'utilisateur est déjà connecté
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/')
+    }
+  }, [user, loading, router])
+
+  // Ne pas afficher le formulaire si l'utilisateur est connecté
+  if (loading) {
+    return (
+      <div className="w-full max-w-md mx-auto text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+        <p className="text-muted-foreground">Vérification de la session...</p>
+      </div>
+    )
+  }
+
+  if (user) {
+    return (
+      <div className="w-full max-w-md mx-auto text-center">
+        <p className="text-muted-foreground">Redirection en cours...</p>
+      </div>
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
+    e.preventDefault()
+    setError(null)
+    setIsSubmitting(true)
+
+    if (!email || !password) {
+      setError('Veuillez remplir tous les champs')
+      setIsSubmitting(false)
+      return
+    }
 
     try {
-      const { error } = await signIn(email, password);
+      const result = await signIn(email, password)
       
-      if (error) {
-        setError("Email ou mot de passe incorrect");
-        return;
+      if (result.success) {
+        // Redirection directe après succès
+        window.location.href = '/'
+      } else {
+        setError(result.error || 'Erreur lors de la connexion')
+        setIsSubmitting(false)
       }
-      
-      // Forcer une redirection complète au lieu d'une navigation côté client
-      window.location.href = "/";
-    } catch (err) {
-      setError("Une erreur est survenue lors de la connexion");
-      console.error(err);
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      setError('Une erreur inattendue est survenue')
+      setIsSubmitting(false)
     }
-  };
+  }
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-6">
-      <div className="text-center">
+    <div className="w-full max-w-md mx-auto">
+      <div className="text-center mb-6">
         <h1 className="text-2xl font-bold">Connexion</h1>
         <p className="text-muted-foreground mt-2">
-          Connectez-vous pour accéder à votre compte
+          Connectez-vous à votre compte
         </p>
       </div>
-      
+
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -66,42 +94,48 @@ export function LoginForm() {
             placeholder="votre@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={isSubmitting}
             required
           />
         </div>
-        
+
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Mot de passe</Label>
-            <a
-              href="/reset-password"
-              className="text-sm text-primary hover:underline"
-            >
-              Mot de passe oublié?
-            </a>
-          </div>
+          <Label htmlFor="password">Mot de passe</Label>
           <Input
             id="password"
             type="password"
+            placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={isSubmitting}
             required
           />
         </div>
-        
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? "Connexion en cours..." : "Se connecter"}
+
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Connexion...
+            </>
+          ) : (
+            'Se connecter'
+          )}
         </Button>
       </form>
-      
-      <div className="text-center">
+
+      <div className="text-center mt-4">
         <p className="text-sm text-muted-foreground">
-          Vous n'avez pas de compte?{" "}
+          Pas encore de compte ?{' '}
           <a href="/register" className="text-primary hover:underline">
-            Créer un compte
+            S&apos;inscrire
           </a>
         </p>
       </div>
     </div>
-  );
+  )
 } 

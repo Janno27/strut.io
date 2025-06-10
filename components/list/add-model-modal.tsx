@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Upload, X } from "lucide-react"
 import Image from "next/image"
-import { useAuth } from "@/lib/context/auth-context"
+import { useAuth } from "@/lib/auth/auth-provider"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 
