@@ -67,7 +67,7 @@ export async function middleware(req: NextRequest) {
       }
     )
 
-    // Utiliser getUser() qui est sécurisé (même si plus lent)
+    // Utiliser getUser() qui est sécurisé
     const { data: { user }, error } = await supabase.auth.getUser()
     
     const isAuthenticated = user && !error
@@ -77,27 +77,20 @@ export async function middleware(req: NextRequest) {
       console.log(`Middleware: ${pathname}, Auth: ${!!isAuthenticated}, Public: ${isPublicRoute}`)
     }
 
-    // Redirection uniquement si nécessaire et éviter les boucles
+    // Redirection simplifiée - éviter les boucles
     if (!isAuthenticated && !isPublicRoute) {
       const loginUrl = new URL('/login', req.url)
-      // Éviter la redirection si on vient déjà de login
-      if (req.headers.get('referer')?.includes('/login')) {
-        return res
-      }
       return NextResponse.redirect(loginUrl)
     }
 
     if (isAuthenticated && isPublicRoute) {
       const homeUrl = new URL('/', req.url)
-      // Éviter la redirection si on vient déjà de home
-      if (req.headers.get('referer')?.includes(req.nextUrl.origin)) {
-        return res
-      }
       return NextResponse.redirect(homeUrl)
     }
 
     return res
   } catch (error) {
+    console.error('Erreur middleware:', error)
     // En cas d'erreur, permettre l'accès aux routes publiques seulement
     if (isPublicRoute) {
       return res

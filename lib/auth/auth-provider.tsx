@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 interface Profile {
   id: string
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   })
 
   const supabase = createClient()
+  const router = useRouter()
 
   // Fonction pour charger le profil utilisateur
   const loadProfile = useCallback(async (userId: string): Promise<Profile | null> => {
@@ -73,10 +75,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (state.initialized) return
 
     let mounted = true
+    let authSubscription: any = null
 
     const initialize = async () => {
       try {
-        // Utiliser getUser() pour une vérification sécurisée
+        // Vérifier l'utilisateur actuel
         const { data: { user }, error } = await supabase.auth.getUser()
         
         if (!mounted) return
@@ -97,6 +100,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             initialized: true
           })
         }
+
+        // Écouter les changements d'authentification APRÈS l'initialisation
+        authSubscription = supabase.auth.onAuthStateChange(
+          async (event: any, session: any) => {
+            if (!mounted) return
+
+            console.log('Auth event:', event)
+
+            // Gérer uniquement les événements importants
+            if (event === 'SIGNED_IN' && session?.user) {
+              const profile = await loadProfile(session.user.id)
+              setState({
+                user: session.user,
+                profile,
+                loading: false,
+                initialized: true
+              })
+            } else if (event === 'SIGNED_OUT') {
+              setState({
+                user: null,
+                profile: null,
+                loading: false,
+                initialized: true
+              })
+            }
+            // Ignorer TOKEN_REFRESHED pour éviter les conflits
+          }
+        )
       } catch (error) {
         console.error('Erreur lors de l\'initialisation:', error)
         if (mounted) {
@@ -112,41 +143,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initialize()
 
-    // Écouter les changements d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: any, session: any) => {
-        console.log('Auth event:', event)
-
-        if (!mounted) return
-
-        if (event === 'SIGNED_IN' && session?.user) {
-          const profile = await loadProfile(session.user.id)
-          setState({
-            user: session.user,
-            profile,
-            loading: false,
-            initialized: true
-          })
-        } else if (event === 'SIGNED_OUT') {
-          setState({
-            user: null,
-            profile: null,
-            loading: false,
-            initialized: true
-          })
-        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          setState(prev => ({
-            ...prev,
-            user: session.user,
-            loading: false
-          }))
-        }
-      }
-    )
-
     return () => {
       mounted = false
-      subscription.unsubscribe()
+      if (authSubscription) {
+        authSubscription.data.subscription.unsubscribe()
+      }
     }
   }, [state.initialized, supabase, loadProfile])
 
@@ -168,14 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.user) {
-        // Attendre un petit délai pour la synchronisation
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Redirection simple
-        if (typeof window !== 'undefined') {
-          window.location.href = '/'
-        }
-        
+        // NE PAS rediriger ici - laisser le middleware gérer
         return { success: true }
       }
 
@@ -218,8 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Fonction de déconnexion
   const signOut = async () => {
     try {
-      await supabase.auth.signOut()
-      
+      // Mettre à jour l'état immédiatement
       setState({ 
         user: null, 
         profile: null, 
@@ -227,10 +220,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         initialized: true
       })
       
-      // Redirection simple après nettoyage
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login'
-      }
+      // Déconnexion Supabase
+      await supabase.auth.signOut()
+      
+      // Attendre un petit délai puis rediriger
+      setTimeout(() => {
+        router.push('/login')
+      }, 100)
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error)
     }

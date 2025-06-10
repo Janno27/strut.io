@@ -14,33 +14,36 @@ export function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
   const { signIn, user, loading, initialized } = useAuth()
   const router = useRouter()
 
   // Rediriger si l'utilisateur est déjà connecté
   useEffect(() => {
-    if (initialized && !loading && user) {
-      // Éviter les redirections en boucle
-      if (window.location.pathname === '/login') {
+    if (initialized && !loading && user && !redirecting) {
+      setRedirecting(true)
+      // Utiliser router.replace pour éviter l'historique
+      setTimeout(() => {
         router.replace('/')
-      }
+      }, 100)
     }
-  }, [user, loading, initialized, router])
+  }, [user, loading, initialized, router, redirecting])
 
   // Afficher un loader pendant l'initialisation
-  if (!initialized || loading) {
+  if (!initialized) {
     return (
       <div className="w-full max-w-md mx-auto text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-        <p className="text-muted-foreground">Vérification de la session...</p>
+        <p className="text-muted-foreground">Initialisation...</p>
       </div>
     )
   }
 
-  // Si l'utilisateur est connecté, afficher un message de redirection
-  if (user) {
+  // Si l'utilisateur est connecté ou en cours de redirection
+  if (user || redirecting) {
     return (
       <div className="w-full max-w-md mx-auto text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
         <p className="text-muted-foreground">Redirection en cours...</p>
       </div>
     )
@@ -60,11 +63,17 @@ export function LoginForm() {
     try {
       const result = await signIn(email, password)
       
-      if (!result.success) {
+      if (result.success) {
+        // Attendre que l'auth provider détecte la connexion
+        setRedirecting(true)
+        // Redirection via le middleware automatiquement
+        setTimeout(() => {
+          window.location.href = '/'
+        }, 500)
+      } else {
         setError(result.error || 'Erreur lors de la connexion')
         setIsSubmitting(false)
       }
-      // Si succès, la redirection se fait dans le provider
     } catch (err) {
       console.error('Erreur de connexion:', err)
       setError('Une erreur inattendue est survenue')
@@ -97,7 +106,7 @@ export function LoginForm() {
             placeholder="votre@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            disabled={isSubmitting}
+            disabled={isSubmitting || redirecting}
             required
           />
         </div>
@@ -110,7 +119,7 @@ export function LoginForm() {
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            disabled={isSubmitting}
+            disabled={isSubmitting || redirecting}
             required
           />
         </div>
@@ -118,12 +127,12 @@ export function LoginForm() {
         <Button 
           type="submit" 
           className="w-full" 
-          disabled={isSubmitting}
+          disabled={isSubmitting || redirecting}
         >
-          {isSubmitting ? (
+          {isSubmitting || redirecting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Connexion...
+              {redirecting ? 'Redirection...' : 'Connexion...'}
             </>
           ) : (
             'Se connecter'
