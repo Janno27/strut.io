@@ -40,6 +40,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Rediriger vers page d'erreur en cas de problème
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  // Rediriger vers login en cas de problème
+  return NextResponse.redirect(`${origin}/login?error=auth_callback_error`)
 }
