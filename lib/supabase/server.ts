@@ -25,7 +25,7 @@ export async function createClient() {
             })
           } catch (error) {
             // Les cookies ne peuvent pas être définis dans certains contextes server-side
-            console.warn('Unable to set cookie in server component:', error)
+            // Ce n'est pas grave, le middleware gère les cookies
           }
         },
         remove(name: string, options: any) {
@@ -42,9 +42,14 @@ export async function createClient() {
             })
           } catch (error) {
             // Les cookies ne peuvent pas être supprimés dans certains contextes server-side
-            console.warn('Unable to remove cookie in server component:', error)
+            // Ce n'est pas grave, le middleware gère les cookies
           }
         }
+      },
+      auth: {
+        persistSession: false, // Important : pas de persistance sur le serveur
+        autoRefreshToken: false, // Pas de refresh automatique sur le serveur
+        detectSessionInUrl: false, // Pas de détection d'URL sur le serveur
       }
     }
   )

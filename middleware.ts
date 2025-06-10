@@ -4,8 +4,28 @@ import { createServerClient } from '@supabase/ssr'
 
 // Middleware qui gère l'authentification des routes
 export async function middleware(req: NextRequest) {
-  // Créer la réponse de base
   let res = NextResponse.next()
+
+  const { pathname } = req.nextUrl
+
+  // Routes qui doivent toujours passer (API, static, auth)
+  const alwaysAllowRoutes = [
+    '/api',
+    '/_next',
+    '/favicon.ico',
+    '/public',
+    '/images',
+    '/auth/callback',
+    '/auth/signout',
+    '/auth/confirm',
+    '/auth/verify-email'
+  ]
+
+  const shouldSkipAuth = alwaysAllowRoutes.some(route => pathname.startsWith(route))
+  
+  if (shouldSkipAuth) {
+    return res
+  }
 
   try {
     const supabase = createServerClient(
@@ -25,7 +45,6 @@ export async function middleware(req: NextRequest) {
               secure: process.env.NODE_ENV === 'production',
               sameSite: 'lax',
               path: '/',
-              maxAge: 60 * 60 * 24 * 7, // 1 semaine
             })
           },
           remove(name, options) {
@@ -44,43 +63,32 @@ export async function middleware(req: NextRequest) {
       }
     )
 
-    // Récupérer l'utilisateur avec gestion d'erreur
-    const { data: { user }, error } = await supabase.auth.getUser()
-    
-    const { pathname } = req.nextUrl
-
-    // Routes publiques (pas d'authentification requise)
+    // Routes publiques
     const publicRoutes = ['/login', '/register']
     const isPublicRoute = publicRoutes.includes(pathname)
 
-    // Routes d'auth (pour éviter les boucles)
-    const authRoutes = ['/auth/callback', '/auth/signout', '/auth/confirm', '/auth/verify-email']
-    const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
+    // Vérifier la session de façon plus robuste
+    const { data: { session } } = await supabase.auth.getSession()
+    const hasValidSession = session && session.user && session.expires_at && new Date(session.expires_at * 1000) > new Date()
 
-    // Si c'est une route d'auth, laisser passer
-    if (isAuthRoute) {
-      return res
+    // Logs de debug seulement en développement
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Middleware: ${pathname}, Session: ${!!hasValidSession}, Public: ${isPublicRoute}`)
     }
 
-    // Logs pour debug
-    console.log('Middleware - Path:', pathname, 'User:', !!user, 'Error:', !!error)
-
-    // Si l'utilisateur n'est pas connecté et essaie d'accéder à une route protégée
-    if (!user && !isPublicRoute) {
-      console.log('Redirecting to login:', pathname)
+    // Redirection uniquement si nécessaire
+    if (!hasValidSession && !isPublicRoute) {
       return NextResponse.redirect(new URL('/login', req.url))
     }
 
-    // Si l'utilisateur est connecté et essaie d'accéder aux pages d'auth
-    if (user && isPublicRoute) {
-      console.log('User authenticated, redirecting to home from:', pathname)
+    if (hasValidSession && isPublicRoute) {
       return NextResponse.redirect(new URL('/', req.url))
     }
 
     return res
   } catch (error) {
-    console.error('Erreur dans le middleware:', error)
-    // En cas d'erreur, laisser passer la requête
+    // En cas d'erreur, logs et continuation
+    console.error('Middleware error:', error)
     return res
   }
 }
@@ -89,13 +97,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - images folder
+     * Match all request paths except API routes and static files
      */
     '/((?!api|_next/static|_next/image|favicon.ico|public|images).*)',
   ],
