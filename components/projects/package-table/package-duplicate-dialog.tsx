@@ -15,9 +15,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { SearchBar } from "@/components/ui/search-bar"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
-import { Heart, UserCheck, UserX, Star, Plus } from "lucide-react"
+import { Heart, UserCheck, UserX, Star, Plus, Search } from "lucide-react"
 import { useAuth } from "@/lib/auth/auth-provider"
 
 interface Model {
@@ -55,6 +56,8 @@ export function PackageDuplicateDialog({
   const [iterationDescription, setIterationDescription] = useState('')
   const [allModels, setAllModels] = useState<Model[]>([])
   const [selectedNewModels, setSelectedNewModels] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
   
   const { toast } = useToast()
   const { user } = useAuth()
@@ -148,6 +151,15 @@ export function PackageDuplicateDialog({
     )
   }
 
+  // Filtrer les nouveaux modèles en fonction de la recherche
+  const filteredNewModels = allModels
+    .filter(model => !models.some(m => m.id === model.id))
+    .filter(model => {
+      if (!searchQuery) return true
+      const fullName = `${model.first_name} ${model.last_name}`.toLowerCase()
+      return fullName.includes(searchQuery.toLowerCase())
+    })
+
   const createIterationPackage = async () => {
     if (!originalPackage) return
 
@@ -232,15 +244,29 @@ export function PackageDuplicateDialog({
     setCurrentStep('shortlist')
     setModels([])
     setSelectedNewModels([])
+    setSearchQuery('')
+    setIsSearchOpen(false)
     onClose()
+  }
+
+  const handleSearchToggle = () => {
+    setIsSearchOpen(!isSearchOpen)
+    // Si on ferme la recherche, on annule la recherche
+    if (isSearchOpen) {
+      setSearchQuery('')
+    }
+  }
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query)
   }
 
   if (!originalPackage) return null
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader className="pb-4">
           <DialogTitle>Itérer le package</DialogTitle>
           <DialogDescription>
             Sélectionnez les mannequins shortlistés et ajoutez de nouveaux candidats
@@ -248,61 +274,58 @@ export function PackageDuplicateDialog({
         </DialogHeader>
 
         <Tabs value={currentStep} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="shortlist">
-              1. Sélectionner les shortlistés
+              1. Shortlistés
             </TabsTrigger>
             <TabsTrigger value="revision">
-              2. Ajouter des candidats
+              2. Nouveaux candidats
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="shortlist" className="space-y-6">
+          <TabsContent value="shortlist" className="space-y-4">
             <div className="space-y-4">
-              <div>
+              <div className="w-2/3">
                 <Label htmlFor="iteration-name">Nom de l'itération</Label>
                 <Input
                   id="iteration-name"
                   value={iterationName}
                   onChange={(e) => setIterationName(e.target.value)}
+                  className="mt-1"
                 />
               </div>
-              <div>
+              <div className="w-2/3">
                 <Label htmlFor="iteration-description">Description</Label>
                 <Textarea
                   id="iteration-description"
                   value={iterationDescription}
                   onChange={(e) => setIterationDescription(e.target.value)}
-                  rows={3}
+                  rows={2}
+                  className="mt-1"
                 />
               </div>
             </div>
 
-            <div>
-              <h3 className="text-lg font-medium mb-4">
-                Sélectionnez les mannequins retenus ({models.filter(m => m.is_shortlisted).length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+            <div className="space-y-3">
+              <h3 className="text-base font-medium">Sélectionnez les mannequins retenus</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
                 {models.map((model) => (
-                  <div key={model.id} className="border rounded-lg p-3">
+                  <div key={model.id} className="border rounded-lg p-3 hover:bg-muted/50 transition-colors">
                     <div className="flex items-center space-x-3">
                       <img 
                         src={model.main_image} 
                         alt={`${model.first_name} ${model.last_name}`}
-                        className="w-12 h-12 rounded-full object-cover"
+                        className="w-10 h-10 rounded-full object-cover"
                       />
-                      <div className="flex-1">
-                        <p className="font-medium">{model.first_name} {model.last_name}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{model.first_name} {model.last_name}</p>
                         <div className="flex items-center space-x-2 mt-1">
                           <Checkbox
                             checked={model.is_shortlisted}
                             onCheckedChange={() => toggleModelShortlist(model.id)}
                           />
-                          <span className="text-sm text-muted-foreground">
-                            {model.is_shortlisted ? 'Retenu' : 'Non retenu'}
-                          </span>
                           {model.is_shortlisted && (
-                            <Badge variant="default" className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white">
+                            <Badge variant="default" className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-xs">
                               <Star className="w-3 h-3 mr-1 fill-current" />
                               Shortlist
                             </Badge>
@@ -315,7 +338,7 @@ export function PackageDuplicateDialog({
               </div>
             </div>
 
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end space-x-2 pt-4">
               <Button variant="outline" onClick={handleClose}>
                 Annuler
               </Button>
@@ -327,33 +350,42 @@ export function PackageDuplicateDialog({
             </div>
           </TabsContent>
 
-          <TabsContent value="revision" className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium mb-4">
-                Ajouter de nouveaux candidats ({selectedNewModels.length} sélectionné(s))
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                {allModels
-                  .filter(model => !models.some(m => m.id === model.id))
-                  .map((model) => (
-                    <div key={model.id} className="border rounded-lg p-3">
+          <TabsContent value="revision" className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <h3 className="text-base font-medium">
+                  Candidats disponibles ({filteredNewModels.length})
+                </h3>
+                <SearchBar 
+                  isOpen={isSearchOpen}
+                  onToggle={handleSearchToggle}
+                  onSearch={handleSearch}
+                  placeholder="Rechercher par nom..."
+                />
+              </div>
+
+              {filteredNewModels.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {searchQuery ? 'Aucun candidat trouvé pour cette recherche' : 'Aucun nouveau candidat disponible'}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
+                  {filteredNewModels.map((model) => (
+                    <div key={model.id} className="border rounded-lg p-3 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center space-x-3">
                         <img 
                           src={model.main_image} 
                           alt={`${model.first_name} ${model.last_name}`}
-                          className="w-12 h-12 rounded-full object-cover"
+                          className="w-10 h-10 rounded-full object-cover"
                         />
-                        <div className="flex-1">
-                          <p className="font-medium">{model.first_name} {model.last_name}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{model.first_name} {model.last_name}</p>
                           <div className="flex items-center space-x-2 mt-1">
                             <Checkbox
                               checked={selectedNewModels.includes(model.id)}
                               onCheckedChange={() => toggleNewModelSelection(model.id)}
                             />
-                            <span className="text-sm text-muted-foreground">
-                              Ajouter
-                            </span>
-                            <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+                            <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50 text-xs">
                               <Plus className="w-3 h-3 mr-1" />
                               Nouveau
                             </Badge>
@@ -362,11 +394,12 @@ export function PackageDuplicateDialog({
                       </div>
                     </div>
                   ))}
-              </div>
+                </div>
+              )}
             </div>
 
-            <div className="bg-muted/50 rounded-lg p-4">
-              <h4 className="font-medium mb-2">Résumé de l'itération :</h4>
+            <div className="bg-muted/50 rounded-lg p-3">
+              <h4 className="font-medium mb-2 text-sm">Résumé de l'itération :</h4>
               <div className="space-y-1 text-sm">
                 <p>• {models.filter(m => m.is_shortlisted).length} mannequin(s) shortlisté(s)</p>
                 <p>• {selectedNewModels.length} nouveau(x) candidat(s)</p>
@@ -374,7 +407,7 @@ export function PackageDuplicateDialog({
               </div>
             </div>
 
-            <div className="flex justify-between">
+            <div className="flex justify-between pt-4">
               <Button variant="outline" onClick={() => setCurrentStep('shortlist')}>
                 Retour
               </Button>
