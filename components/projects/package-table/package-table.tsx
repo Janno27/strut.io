@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 import { PackageList } from "./package-list";
 import { NewPackageButton } from "./new-package-button";
@@ -356,13 +357,6 @@ export function PackageTable({ projectId }: PackageTableProps) {
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
-        <NewPackageButton 
-          isOpen={isDialogOpen} 
-          setIsOpen={handleOpenDialog} 
-        />
-      </div>
-      
       {isLoading ? (
         <div className="text-center py-8">Chargement des packages...</div>
       ) : (
@@ -372,6 +366,14 @@ export function PackageTable({ projectId }: PackageTableProps) {
           onEditPackage={handleEditPackage}
           onSharePackage={handleSharePackage}
         />
+      )}
+      
+      {typeof window !== 'undefined' && document.getElementById('new-package-button-container') && createPortal(
+        <NewPackageButton 
+          isOpen={isDialogOpen} 
+          setIsOpen={handleOpenDialog} 
+        />,
+        document.getElementById('new-package-button-container')!
       )}
       
       <PackageDialog
