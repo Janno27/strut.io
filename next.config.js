@@ -1,9 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    // Configuration pour les Server Components et Supabase
-    serverComponentsExternalPackages: ['@supabase/supabase-js', '@supabase/ssr']
-  },
+  serverExternalPackages: ['@supabase/supabase-js', '@supabase/ssr'],
   images: {
     remotePatterns: [
       {
@@ -28,7 +25,7 @@ const nextConfig = {
   // Configuration pour la production
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
   
-  // Configuration des en-têtes de sécurité
+  // Configuration des en-têtes de sécurité et CORS
   async headers() {
     return [
       {
@@ -49,6 +46,21 @@ const nextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()'
+          },
+          // Headers pour améliorer les performances RSC
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: process.env.NODE_ENV === 'production' 
+              ? process.env.NEXT_PUBLIC_SITE_URL || 'https://strut-io.onrender.com'
+              : '*'
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS'
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization, X-Requested-With'
           }
         ]
       }
@@ -66,8 +78,7 @@ const nextConfig = {
     ]
   },
 
-  // Configuration pour optimiser les builds
-  swcMinify: true,
+
   
   // Configuration TypeScript stricte
   typescript: {

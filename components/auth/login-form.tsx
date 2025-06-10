@@ -14,18 +14,21 @@ export function LoginForm() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { signIn, user, loading } = useAuth()
+  const { signIn, user, loading, initialized } = useAuth()
   const router = useRouter()
 
   // Rediriger si l'utilisateur est déjà connecté
   useEffect(() => {
-    if (!loading && user) {
-      router.push('/')
+    if (initialized && !loading && user) {
+      // Éviter les redirections en boucle
+      if (window.location.pathname === '/login') {
+        router.replace('/')
+      }
     }
-  }, [user, loading, router])
+  }, [user, loading, initialized, router])
 
-  // Ne pas afficher le formulaire si l'utilisateur est connecté
-  if (loading) {
+  // Afficher un loader pendant l'initialisation
+  if (!initialized || loading) {
     return (
       <div className="w-full max-w-md mx-auto text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
@@ -34,6 +37,7 @@ export function LoginForm() {
     )
   }
 
+  // Si l'utilisateur est connecté, afficher un message de redirection
   if (user) {
     return (
       <div className="w-full max-w-md mx-auto text-center">
@@ -56,14 +60,13 @@ export function LoginForm() {
     try {
       const result = await signIn(email, password)
       
-      if (result.success) {
-        // Redirection directe après succès
-        window.location.href = '/'
-      } else {
+      if (!result.success) {
         setError(result.error || 'Erreur lors de la connexion')
         setIsSubmitting(false)
       }
-    } catch (error) {
+      // Si succès, la redirection se fait dans le provider
+    } catch (err) {
+      console.error('Erreur de connexion:', err)
       setError('Une erreur inattendue est survenue')
       setIsSubmitting(false)
     }

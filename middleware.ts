@@ -27,6 +27,10 @@ export async function middleware(req: NextRequest) {
     return res
   }
 
+  // Routes publiques
+  const publicRoutes = ['/login', '/register']
+  const isPublicRoute = publicRoutes.includes(pathname)
+
   try {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -63,33 +67,43 @@ export async function middleware(req: NextRequest) {
       }
     )
 
-    // Routes publiques
-    const publicRoutes = ['/login', '/register']
-    const isPublicRoute = publicRoutes.includes(pathname)
-
-    // Vérifier la session de façon plus robuste
-    const { data: { session } } = await supabase.auth.getSession()
-    const hasValidSession = session && session.user && session.expires_at && new Date(session.expires_at * 1000) > new Date()
+    // Utiliser getUser() qui est sécurisé (même si plus lent)
+    const { data: { user }, error } = await supabase.auth.getUser()
+    
+    const isAuthenticated = user && !error
 
     // Logs de debug seulement en développement
     if (process.env.NODE_ENV === 'development') {
-      console.log(`Middleware: ${pathname}, Session: ${!!hasValidSession}, Public: ${isPublicRoute}`)
+      console.log(`Middleware: ${pathname}, Auth: ${!!isAuthenticated}, Public: ${isPublicRoute}`)
     }
 
-    // Redirection uniquement si nécessaire
-    if (!hasValidSession && !isPublicRoute) {
-      return NextResponse.redirect(new URL('/login', req.url))
+    // Redirection uniquement si nécessaire et éviter les boucles
+    if (!isAuthenticated && !isPublicRoute) {
+      const loginUrl = new URL('/login', req.url)
+      // Éviter la redirection si on vient déjà de login
+      if (req.headers.get('referer')?.includes('/login')) {
+        return res
+      }
+      return NextResponse.redirect(loginUrl)
     }
 
-    if (hasValidSession && isPublicRoute) {
-      return NextResponse.redirect(new URL('/', req.url))
+    if (isAuthenticated && isPublicRoute) {
+      const homeUrl = new URL('/', req.url)
+      // Éviter la redirection si on vient déjà de home
+      if (req.headers.get('referer')?.includes(req.nextUrl.origin)) {
+        return res
+      }
+      return NextResponse.redirect(homeUrl)
     }
 
     return res
   } catch (error) {
-    // En cas d'erreur, logs et continuation
-    console.error('Middleware error:', error)
-    return res
+    // En cas d'erreur, permettre l'accès aux routes publiques seulement
+    if (isPublicRoute) {
+      return res
+    }
+    // Sinon rediriger vers login
+    return NextResponse.redirect(new URL('/login', req.url))
   }
 }
 
