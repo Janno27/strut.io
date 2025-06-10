@@ -140,8 +140,25 @@ export function ModelGrid({
         </AnimatePresence>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 p-2">
+          {/* Carte d'ajout de modèle en première position */}
+          {canAddModel && (!selectedModelId || isSharedView) && (
+            <motion.div
+              layout
+              layoutId="add-model-card"
+              className="mb-6"
+            >
+              <AddModelCard onClick={handleOpenAddModal} />
+            </motion.div>
+          )}
+
           {models
             .filter(model => model && model.id && (!selectedModelId || model.id !== selectedModelId || isSharedView))
+            .sort((a, b) => {
+              // Extraire le prénom (premier mot du nom)
+              const firstNameA = a.name.split(' ')[0] || '';
+              const firstNameB = b.name.split(' ')[0] || '';
+              return firstNameA.localeCompare(firstNameB, 'fr', { sensitivity: 'base' });
+            })
             .map((model, index) => {
             // Calculer la position dans la grille
             const column = index % 3;
@@ -176,17 +193,6 @@ export function ModelGrid({
               </motion.div>
             );
           })}
-
-          {/* Carte d'ajout de modèle (uniquement pour les Admin/Agent) */}
-          {canAddModel && (!selectedModelId || isSharedView) && (
-            <motion.div
-              layout
-              layoutId="add-model-card"
-              className="mb-6"
-            >
-              <AddModelCard onClick={handleOpenAddModal} />
-            </motion.div>
-          )}
         </div>
 
         {/* Modal d'ajout de modèle */}

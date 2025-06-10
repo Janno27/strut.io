@@ -17,6 +17,7 @@ import Image from "next/image"
 import { useAuth } from "@/lib/auth/auth-provider"
 import { DraggableImageGrid } from "@/components/ui/draggable-image-grid"
 import { MainImageUploader } from "@/components/ui/main-image-uploader"
+import { DefaultAvatar } from "@/components/ui/default-avatar"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 
@@ -151,12 +152,15 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
   }
 
   // Télécharger les images sur Supabase Storage et récupérer les URLs publiques
-  const uploadImagesToStorage = async () => {
+  const uploadImagesToStorage = async (mainFile: File | null = null) => {
     try {
+      // Utiliser le fichier passé en paramètre ou celui de l'état
+      const fileToUpload = mainFile || mainImageFile;
+      
       // Télécharger l'image principale
       let mainImageUrl = "";
-      if (mainImageFile) {
-        const fileExt = mainImageFile.name.split('.').pop();
+      if (fileToUpload) {
+        const fileExt = fileToUpload.name.split('.').pop();
         const fileName = `${Date.now()}_main.${fileExt}`;
         const filePath = fileName;
         
@@ -174,7 +178,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
         // Upload avec gestion d'erreur détaillée
         const uploadResult = await supabase.storage
           .from('models')
-          .upload(filePath, mainImageFile, {
+          .upload(filePath, fileToUpload, {
             cacheControl: '3600',
             upsert: true
           });
@@ -192,7 +196,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
         mainImageUrl = mainImageData.publicUrl;
         console.log("URL de l'image principale:", mainImageUrl);
       } else {
-        throw new Error("Aucune image principale n'a été sélectionnée");
+        throw new Error("Aucune image principale n'a pu être générée");
       }
 
       // Télécharger les images supplémentaires
@@ -229,6 +233,67 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
     }
   }
 
+  // Générer une image par défaut si nécessaire
+  const generateDefaultImage = async (): Promise<string> => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) throw new Error('Impossible de créer le canvas');
+    
+    // Générer la couleur basée sur le prénom
+    const getColorFromName = (name: string) => {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      
+      const colors = [
+        ['#60A5FA', '#2563EB'], // blue
+        ['#A78BFA', '#7C3AED'], // purple
+        ['#F472B6', '#EC4899'], // pink
+        ['#4ADE80', '#16A34A'], // green
+        ['#FBBF24', '#F59E0B'], // yellow/orange
+        ['#818CF8', '#4F46E5'], // indigo
+        ['#F87171', '#DC2626'], // red
+        ['#2DD4BF', '#0D9488'], // teal
+        ['#22D3EE', '#0891B2'], // cyan
+        ['#34D399', '#059669']  // emerald
+      ];
+      
+      return colors[Math.abs(hash) % colors.length];
+    };
+    
+    const [color1, color2] = getColorFromName(formData.firstName);
+    
+    // Créer le dégradé
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, color1);
+    gradient.addColorStop(1, color2);
+    
+    // Remplir le fond
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Ajouter les initiales
+    const initials = `${formData.firstName[0] || ''}${formData.lastName[0] || ''}`.toUpperCase();
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 80px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(initials, canvas.width / 2, canvas.height / 2);
+    
+    // Ajouter le badge genre
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.fillRect(canvas.width - 60, 10, 50, 30);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText(formData.gender === 'male' ? 'H' : 'F', canvas.width - 35, 25);
+    
+    return canvas.toDataURL('image/png');
+  };
+
   // Soumettre le formulaire
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,11 +303,27 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
       return;
     }
     
-    try {
+    // Validation : prénom obligatoire
+    if (!formData.firstName.trim()) {
+      toast.error("Le prénom est obligatoire");
+      return;
+    }
+    
+          try {
       setIsLoading(true);
       
+      // Générer une image par défaut si pas d'image principale
+      let finalMainImageFile = mainImageFile;
+      if (!mainImageFile) {
+        const defaultImageDataUrl = await generateDefaultImage();
+        // Convertir dataURL en blob puis en file
+        const response = await fetch(defaultImageDataUrl);
+        const blob = await response.blob();
+        finalMainImageFile = new File([blob], `${formData.firstName}_${formData.lastName}_default.png`, { type: 'image/png' });
+      }
+      
       // Télécharger les images
-      const { mainImageUrl, additionalImageUrls } = await uploadImagesToStorage();
+      const { mainImageUrl, additionalImageUrls } = await uploadImagesToStorage(finalMainImageFile);
       console.log("Images téléchargées avec succès:", { mainImageUrl, additionalImageUrls });
       
       // Préparer les données du modèle avec les valeurs personnalisées si nécessaire
@@ -352,12 +433,13 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
             <div className="md:col-span-2 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">Prénom</Label>
+                  <Label htmlFor="firstName">Prénom <span className="text-red-500">*</span></Label>
                   <Input
                     id="firstName"
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
+                    required
                   />
                 </div>
                 

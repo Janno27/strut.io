@@ -173,22 +173,22 @@ export function ModelDetail({
       newAdditionalImageUrls.push(additionalImageData.publicUrl);
     }
     
-          // Supprimer les images marquées pour suppression
-      for (const imageUrl of imagesToDelete) {
-        const filePath = imageUrl.split('/').pop();
-        if (filePath) {
-          await supabase.storage
-            .from('models')
-            .remove([filePath]);
-            
-          // Retirer l'URL de la liste des images supplémentaires
-          const index = newAdditionalImageUrls.indexOf(imageUrl);
-          if (index > -1) {
-            newAdditionalImageUrls.splice(index, 1);
-          }
+    // Supprimer les images marquées pour suppression
+    for (const imageUrl of imagesToDelete) {
+      const filePath = imageUrl.split('/').pop();
+      if (filePath) {
+        await supabase.storage
+          .from('models')
+          .remove([filePath]);
+          
+        // Retirer l'URL de la liste des images supplémentaires
+        const index = newAdditionalImageUrls.indexOf(imageUrl);
+        if (index > -1) {
+          newAdditionalImageUrls.splice(index, 1);
         }
       }
-      
+    }
+    
       // Réorganiser selon l'ordre défini
       const finalOrderedImages = imageOrder
         .filter(img => !imagesToDelete.includes(img)) // Exclure les supprimées
@@ -590,21 +590,21 @@ export function ModelDetail({
           // Mode affichage
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {displayAdditionalImages.map((imageUrl, index) => (
-              <div 
-                key={index} 
-                className="rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => handleImageClick(imageUrl, index)}
-              >
-                <div className="relative aspect-square">
-                  <Image
-                    src={imageUrl}
-                    alt={`${model.name} - photo ${index + 1}`}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 25vw"
-                  />
-                </div>
+            <div 
+              key={index} 
+              className="rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => handleImageClick(imageUrl, index)}
+            >
+              <div className="relative aspect-square">
+                <Image
+                  src={imageUrl}
+                  alt={`${model.name} - photo ${index + 1}`}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 25vw"
+                />
               </div>
+            </div>
             ))}
           </div>
         ) : (
@@ -618,7 +618,7 @@ export function ModelDetail({
               onImageRemove={handleAdditionalImageRemoveByIndex}
               allowMultiple={true}
               maxImages={10}
-            />
+                />
           </>
         )}
       </div>
