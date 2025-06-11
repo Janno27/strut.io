@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/auth/auth-provider"
 import { DraggableImageGrid } from "@/components/ui/draggable-image-grid"
 import { MainImageUploader } from "@/components/ui/main-image-uploader"
 import { DefaultAvatar } from "@/components/ui/default-avatar"
+import { ImageCropper } from "@/components/ui/image-cropper"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 
@@ -44,6 +45,12 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
   // État pour les valeurs personnalisées
   const [customEyeColor, setCustomEyeColor] = useState("")
   const [customHairColor, setCustomHairColor] = useState("")
+  
+  // État pour le recadrage
+  const [isCropperOpen, setIsCropperOpen] = useState(false)
+  const [cropImageUrl, setCropImageUrl] = useState("")
+  const [cropImageType, setCropImageType] = useState<"main" | "additional">("main")
+  const [cropImageIndex, setCropImageIndex] = useState<number>(-1)
   
   // État pour le formulaire
   const [formData, setFormData] = useState({
@@ -149,6 +156,54 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
     
     setAdditionalImages(newImages)
     setAdditionalImageFiles(newFiles)
+  }
+
+  // Ouvrir le recadreur pour l'image principale
+  const handleMainImageCrop = () => {
+    if (mainImage) {
+      setCropImageUrl(mainImage)
+      setCropImageType("main")
+      setCropImageIndex(-1)
+      setIsCropperOpen(true)
+    }
+  }
+
+  // Ouvrir le recadreur pour une image supplémentaire
+  const handleAdditionalImageCrop = (index: number) => {
+    if (additionalImages[index]) {
+      setCropImageUrl(additionalImages[index])
+      setCropImageType("additional")
+      setCropImageIndex(index)
+      setIsCropperOpen(true)
+    }
+  }
+
+  // Gérer la completion du recadrage
+  const handleCropComplete = (croppedImageFile: File) => {
+    const imageUrl = URL.createObjectURL(croppedImageFile)
+    
+    if (cropImageType === "main") {
+      // Libérer l'ancienne URL si elle existe
+      if (mainImage) {
+        URL.revokeObjectURL(mainImage)
+      }
+      setMainImage(imageUrl)
+      setMainImageFile(croppedImageFile)
+    } else if (cropImageType === "additional" && cropImageIndex >= 0) {
+      // Libérer l'ancienne URL
+      URL.revokeObjectURL(additionalImages[cropImageIndex])
+      
+      // Mettre à jour l'image et le fichier
+      const newImages = [...additionalImages]
+      const newFiles = [...additionalImageFiles]
+      newImages[cropImageIndex] = imageUrl
+      newFiles[cropImageIndex] = croppedImageFile
+      
+      setAdditionalImages(newImages)
+      setAdditionalImageFiles(newFiles)
+    }
+    
+    setIsCropperOpen(false)
   }
 
   // Télécharger les images sur Supabase Storage et récupérer les URLs publiques
@@ -426,6 +481,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                   setMainImage(null)
                   setMainImageFile(null)
                 }}
+                onImageCrop={handleMainImageCrop}
               />
             </div>
             
@@ -653,6 +709,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
                 onImagesChange={handleAdditionalImagesReorder}
                 onImageAdd={handleAdditionalImageUpload}
                 onImageRemove={removeAdditionalImage}
+                onImageCrop={handleAdditionalImageCrop}
                 allowMultiple={true}
                 maxImages={10}
               />
@@ -668,6 +725,16 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
             </Button>
           </div>
         </form>
+        
+        {/* Composant de recadrage */}
+        <ImageCropper
+          isOpen={isCropperOpen}
+          onClose={() => setIsCropperOpen(false)}
+          imageUrl={cropImageUrl}
+          onCropComplete={handleCropComplete}
+          aspectRatio={1}
+          title={cropImageType === "main" ? "Recadrer l'image principale" : "Recadrer l'image"}
+        />
       </DialogContent>
     </Dialog>
   )

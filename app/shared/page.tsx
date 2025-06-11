@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation"
 import { createAnonymousClient } from "@/lib/supabase/anonymous"
 import { ModelTabs } from "../../components/list/model-tabs"
 import { ModelGrid } from "../../components/list/model-grid"
+import { ModelSkeleton } from "../../components/list/model-skeleton"
 import { WishlistDrawer } from "../../components/wishlist/wishlist-drawer"
 import { SharedHeader } from "../../components/layout/shared-header"
 
@@ -454,9 +455,7 @@ function SharedPageContent() {
       )}
       
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <p>Chargement des modèles...</p>
-        </div>
+        <ModelSkeleton />
       ) : error ? (
         <div className="flex flex-col items-center justify-center h-[60vh]">
           <h2 className="text-xl font-semibold text-red-500">Erreur</h2>

@@ -18,7 +18,7 @@ export function SharedHeader({ onOpenWishlist, wishlistCount = 0 }: SharedHeader
       </div>
       
       <div className="text-center">
-        <h1 className="text-4xl font-bold">Strut.io</h1>
+        <h1 className="text-4xl font-bold">Casting.io</h1>
         <p className="text-base text-muted-foreground mt-1">
           Simplifiez la gestion, sublimez vos talents.
         </p>

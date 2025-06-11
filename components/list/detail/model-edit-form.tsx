@@ -17,9 +17,11 @@ export function ModelEditForm({
   onMainImageUpload,
   onMainImageRemove,
   onMainImageEdit,
+  onMainImageCrop,
   onAdditionalImagesChange,
   onAdditionalImageAdd,
   onAdditionalImageRemove,
+  onAdditionalImageCrop,
   showImageManagement = false
 }: ModelEditFormProps) {
   return (
@@ -35,6 +37,7 @@ export function ModelEditForm({
               onImageUpload={onMainImageUpload}
               onImageRemove={onMainImageRemove}
               onImageEdit={onMainImageEdit}
+              onImageCrop={onMainImageCrop}
               height="h-60"
             />
           </div>
@@ -47,6 +50,7 @@ export function ModelEditForm({
               onImagesChange={onAdditionalImagesChange}
               onImageAdd={onAdditionalImageAdd}
               onImageRemove={onAdditionalImageRemove}
+              onImageCrop={onAdditionalImageCrop}
               allowMultiple={true}
               maxImages={10}
             />

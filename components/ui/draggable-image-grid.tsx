@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { GripVertical, Plus, X } from "lucide-react"
+import { GripVertical, Plus, X, Crop } from "lucide-react"
 import Image from "next/image"
 
 interface DraggableImageGridProps {
@@ -10,6 +10,7 @@ interface DraggableImageGridProps {
   onImagesChange: (images: string[]) => void
   onImageAdd: (e: React.ChangeEvent<HTMLInputElement>) => void
   onImageRemove: (index: number) => void
+  onImageCrop?: (index: number) => void
   allowMultiple?: boolean
   maxImages?: number
   className?: string
@@ -20,6 +21,7 @@ export function DraggableImageGrid({
   onImagesChange,
   onImageAdd,
   onImageRemove,
+  onImageCrop,
   allowMultiple = true,
   maxImages = 10,
   className = ""
@@ -102,16 +104,33 @@ export function DraggableImageGrid({
           
           {/* Overlay avec les contrôles */}
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-            {/* Bouton supprimer */}
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => onImageRemove(index)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex gap-2">
+              {/* Bouton recadrer */}
+              {onImageCrop && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onImageCrop(index)}
+                  title="Recadrer l'image"
+                >
+                  <Crop className="h-4 w-4" />
+                </Button>
+              )}
+              
+              {/* Bouton supprimer */}
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => onImageRemove(index)}
+                title="Supprimer l'image"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           
           {/* Indicateur de drag */}

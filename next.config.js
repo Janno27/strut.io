@@ -51,7 +51,7 @@ const nextConfig = {
           {
             key: 'Access-Control-Allow-Origin',
             value: process.env.NODE_ENV === 'production' 
-              ? process.env.NEXT_PUBLIC_SITE_URL || 'https://strut-io.onrender.com'
+              ? process.env.NEXT_PUBLIC_SITE_URL || 'https://casting-io.onrender.com'
               : '*'
           },
           {

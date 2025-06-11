@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Upload, X, Edit, Camera } from "lucide-react"
+import { Upload, X, Edit, Camera, Crop } from "lucide-react"
 import Image from "next/image"
 
 interface MainImageUploaderProps {
@@ -9,6 +9,7 @@ interface MainImageUploaderProps {
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onImageRemove: () => void
   onImageEdit?: () => void
+  onImageCrop?: () => void
   className?: string
   height?: string
 }
@@ -18,6 +19,7 @@ export function MainImageUploader({
   onImageUpload,
   onImageRemove,
   onImageEdit,
+  onImageCrop,
   className = "",
   height = "h-80"
 }: MainImageUploaderProps) {
@@ -36,6 +38,20 @@ export function MainImageUploader({
           {/* Overlay avec les contrôles */}
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center rounded-lg">
             <div className="flex gap-2">
+              {/* Bouton recadrer */}
+              {onImageCrop && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={onImageCrop}
+                  title="Recadrer l'image"
+                >
+                  <Crop className="h-4 w-4" />
+                </Button>
+              )}
+              
               {/* Bouton modifier */}
               {onImageEdit && (
                 <Button
@@ -56,6 +72,7 @@ export function MainImageUploader({
                   variant="secondary"
                   size="icon"
                   className="h-8 w-8"
+                  title="Remplacer l'image"
                 >
                   <Camera className="h-4 w-4" />
                 </Button>
@@ -74,6 +91,7 @@ export function MainImageUploader({
                 size="icon"
                 className="h-8 w-8"
                 onClick={onImageRemove}
+                title="Supprimer l'image"
               >
                 <X className="h-4 w-4" />
               </Button>

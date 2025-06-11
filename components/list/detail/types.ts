@@ -84,9 +84,11 @@ export interface ModelEditFormProps {
   onMainImageUpload?: (e: React.ChangeEvent<HTMLInputElement>) => void
   onMainImageRemove?: () => void
   onMainImageEdit?: () => void
+  onMainImageCrop?: () => void
   onAdditionalImagesChange?: (images: string[]) => void
   onAdditionalImageAdd?: (e: React.ChangeEvent<HTMLInputElement>) => void
   onAdditionalImageRemove?: (index: number) => void
+  onAdditionalImageCrop?: (index: number) => void
   showImageManagement?: boolean
 }
 

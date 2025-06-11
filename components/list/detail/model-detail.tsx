@@ -10,6 +10,7 @@ import { ModelInfo } from "./model-info"
 import { ModelEditForm } from "./model-edit-form"
 import { ImageGallery } from "./image-gallery"
 import { ImageModal } from "./image-modal"
+import { ImageCropper } from "@/components/ui/image-cropper"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight, X, Upload, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -52,6 +53,12 @@ export function ModelDetail({
   const [tempAdditionalImages, setTempAdditionalImages] = useState<string[]>([])
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
   const [imageOrder, setImageOrder] = useState<string[]>([])
+  
+  // État pour le recadrage
+  const [isCropperOpen, setIsCropperOpen] = useState(false)
+  const [cropImageUrl, setCropImageUrl] = useState("")
+  const [cropImageType, setCropImageType] = useState<"main" | "additional">("main")
+  const [cropImageIndex, setCropImageIndex] = useState<number>(-1)
   
   const supabase = createClient()
   
@@ -469,6 +476,75 @@ export function ModelDetail({
     return [...orderedExistingImages, ...newTempImages]
   }
 
+  // Ouvrir le recadreur pour l'image principale
+  const handleMainImageCrop = () => {
+    const currentMainImage = tempMainImage || model.imageUrl
+    if (currentMainImage) {
+      setCropImageUrl(currentMainImage)
+      setCropImageType("main")
+      setCropImageIndex(-1)
+      setIsCropperOpen(true)
+    }
+  }
+
+  // Ouvrir le recadreur pour une image supplémentaire
+  const handleAdditionalImageCrop = (index: number) => {
+    const allImages = getAllAdditionalImages()
+    const imageUrl = allImages[index]
+    if (imageUrl) {
+      setCropImageUrl(imageUrl)
+      setCropImageType("additional")
+      setCropImageIndex(index)
+      setIsCropperOpen(true)
+    }
+  }
+
+  // Gérer la completion du recadrage
+  const handleCropComplete = (croppedImageFile: File) => {
+    const imageUrl = URL.createObjectURL(croppedImageFile)
+    
+    if (cropImageType === "main") {
+      // Libérer l'ancienne URL si elle existe
+      if (tempMainImage) {
+        URL.revokeObjectURL(tempMainImage)
+      }
+      setTempMainImage(imageUrl)
+      setMainImageFile(croppedImageFile)
+    } else if (cropImageType === "additional" && cropImageIndex >= 0) {
+      const allImages = getAllAdditionalImages()
+      const oldImageUrl = allImages[cropImageIndex]
+      
+      // Si c'est une image temporaire, la remplacer
+      if (tempAdditionalImages.includes(oldImageUrl)) {
+        const tempIndex = tempAdditionalImages.indexOf(oldImageUrl)
+        URL.revokeObjectURL(oldImageUrl)
+        
+        const newTempImages = [...tempAdditionalImages]
+        const newFiles = [...additionalImageFiles]
+        newTempImages[tempIndex] = imageUrl
+        newFiles[tempIndex] = croppedImageFile
+        
+        setTempAdditionalImages(newTempImages)
+        setAdditionalImageFiles(newFiles)
+        
+        // Mettre à jour l'ordre
+        const newOrder = imageOrder.map(img => img === oldImageUrl ? imageUrl : img)
+        setImageOrder(newOrder)
+      } else {
+        // Si c'est une image existante, l'ajouter comme nouvelle image temporaire
+        setTempAdditionalImages(prev => [...prev, imageUrl])
+        setAdditionalImageFiles(prev => [...prev, croppedImageFile])
+        
+        // Marquer l'ancienne pour suppression et ajouter la nouvelle à l'ordre
+        setImagesToDelete(prev => [...prev, oldImageUrl])
+        const newOrder = imageOrder.map(img => img === oldImageUrl ? imageUrl : img)
+        setImageOrder(newOrder)
+      }
+    }
+    
+    setIsCropperOpen(false)
+  }
+
   // Séparer les images additionnelles pour l'affichage
   const additionalImages = model.additionalImages || []
   // Filtrer les images qui sont marquées pour suppression
@@ -533,16 +609,25 @@ export function ModelDetail({
                     sizes="(max-width: 768px) 100vw, 50vw"
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                    <label className="cursor-pointer flex flex-col items-center">
-                      <Upload className="h-10 w-10 text-white mb-2" />
-                      <span className="text-white font-medium">Changer l'image</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleMainImageUpload}
-                      />
-                    </label>
+                    <div className="flex flex-col items-center gap-4">
+                      <label className="cursor-pointer flex flex-col items-center">
+                        <Upload className="h-10 w-10 text-white mb-2" />
+                        <span className="text-white font-medium">Changer l'image</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleMainImageUpload}
+                        />
+                      </label>
+                      <Button
+                        variant="secondary"
+                        className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                        onClick={handleMainImageCrop}
+                      >
+                        Recadrer l'image
+                      </Button>
+                    </div>
                   </div>
                 </>
               )}
@@ -616,6 +701,7 @@ export function ModelDetail({
               onImagesChange={handleAdditionalImagesReorder}
               onImageAdd={handleAdditionalImageAdd}
               onImageRemove={handleAdditionalImageRemoveByIndex}
+              onImageCrop={handleAdditionalImageCrop}
               allowMultiple={true}
               maxImages={10}
                 />
@@ -668,6 +754,16 @@ export function ModelDetail({
           </div>
         </div>
       )}
+      
+      {/* Composant de recadrage */}
+      <ImageCropper
+        isOpen={isCropperOpen}
+        onClose={() => setIsCropperOpen(false)}
+        imageUrl={cropImageUrl}
+        onCropComplete={handleCropComplete}
+        aspectRatio={1}
+        title={cropImageType === "main" ? "Recadrer l'image principale" : "Recadrer l'image"}
+      />
     </div>
   )
 }
