@@ -104,9 +104,9 @@ export function UserMenu() {
               </DropdownMenuItem>
               {isAdminOrAgent && (
                 <DropdownMenuItem asChild>
-                  <Link href="/dashboard" className="flex items-center cursor-pointer">
+                  <Link href="/agenda" className="flex items-center cursor-pointer">
                     <LayoutDashboard className="mr-2 h-4 w-4" />
-                    <span>Tableau de bord</span>
+                    <span>Agenda</span>
                   </Link>
                 </DropdownMenuItem>
               )}
