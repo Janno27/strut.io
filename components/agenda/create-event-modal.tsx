@@ -166,34 +166,52 @@ export function CreateEventModal({
 
     if (editingSlot) {
       // Mode édition
-      if (eventType === 'availability') {
-        success = await updateSlot(editingSlot.id, {
+      // Distinguer les vrais slots des rendez-vous virtuels
+      const isAppointmentSlot = editingSlot.id.toString().startsWith('appointment_');
+      
+      if (isAppointmentSlot) {
+        // C'est un rendez-vous virtuel - mettre à jour seulement l'appointment
+        const appointmentId = editingSlot.id.toString().replace('appointment_', '');
+        success = await updateAppointment(appointmentId, {
           start_datetime: startDateTime.toISOString(),
           end_datetime: endDateTime.toISOString(),
-          title: formData.title || undefined,
-          description: formData.description || undefined,
-          is_available: true, // Disponibilité = créneau libre
+          model_name: formData.modelName,
+          model_email: formData.modelEmail || undefined,
+          model_phone: formData.modelPhone || undefined,
+          notes: formData.description || undefined,
         });
       } else {
-        // Mettre à jour le slot et le rendez-vous
-        const slotUpdateSuccess = await updateSlot(editingSlot.id, {
-          start_datetime: startDateTime.toISOString(),
-          end_datetime: endDateTime.toISOString(),
-          title: formData.title || 'Rendez-vous',
-          description: formData.description || undefined,
-          is_available: false, // Rendez-vous = créneau occupé
-        });
-
-        if (slotUpdateSuccess && editingSlot.appointment) {
-          success = await updateAppointment(editingSlot.appointment.id, {
+        // C'est un vrai slot agent
+        if (eventType === 'availability') {
+          success = await updateSlot(editingSlot.id, {
             start_datetime: startDateTime.toISOString(),
             end_datetime: endDateTime.toISOString(),
-            model_name: formData.modelName,
-            model_email: formData.modelEmail || undefined,
-            model_phone: formData.modelPhone || undefined,
+            title: formData.title || undefined,
+            description: formData.description || undefined,
+            is_available: true, // Disponibilité = créneau libre
           });
         } else {
-          success = slotUpdateSuccess;
+          // Mettre à jour le slot et le rendez-vous
+          const slotUpdateSuccess = await updateSlot(editingSlot.id, {
+            start_datetime: startDateTime.toISOString(),
+            end_datetime: endDateTime.toISOString(),
+            title: formData.title || 'Rendez-vous',
+            description: formData.description || undefined,
+            is_available: false, // Rendez-vous = créneau occupé
+          });
+
+          if (slotUpdateSuccess && editingSlot.appointment) {
+            success = await updateAppointment(editingSlot.appointment.id, {
+              start_datetime: startDateTime.toISOString(),
+              end_datetime: endDateTime.toISOString(),
+              model_name: formData.modelName,
+              model_email: formData.modelEmail || undefined,
+              model_phone: formData.modelPhone || undefined,
+              notes: formData.description || undefined,
+            });
+          } else {
+            success = slotUpdateSuccess;
+          }
         }
       }
     } else {

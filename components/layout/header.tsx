@@ -1,11 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { usePathname } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { SearchBar } from "@/components/ui/search-bar"
 import { UserMenu } from "@/components/auth/user-menu"
+import { NotificationIcon } from "@/components/notification"
 import { Link } from "lucide-react"
 import { useAuth } from "@/lib/auth/auth-provider"
 import { useToast } from "@/components/ui/use-toast"
@@ -19,6 +21,7 @@ export function Header({ onSearch, showSearch = false }: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const { user, profile } = useAuth()
   const { toast } = useToast()
+  const pathname = usePathname()
 
   const handleSearch = (query: string) => {
     if (onSearch) {
@@ -50,9 +53,19 @@ export function Header({ onSearch, showSearch = false }: HeaderProps) {
     }
   }
 
-  // Vérifier si on est sur la page agenda pour afficher le bouton partage
-  const isAgendaPage = typeof window !== 'undefined' && window.location.pathname === '/agenda'
+  // Vérifier la page courante pour l'affichage conditionnel
+  const isRootPage = pathname === '/'
+  const isProjectsPage = pathname === '/projects'
+  const isAgendaPage = pathname === '/agenda'
+  
+  // Bouton de partage seulement sur /agenda pour les agents
   const showShareButton = isAgendaPage && profile?.role === 'agent'
+  
+  // Notifications selon les spécifications
+  const showNotifications = 
+    (isRootPage && showSearch) || // Sur / avec search activé
+    isProjectsPage ||             // Sur /projects
+    isAgendaPage                  // Sur /agenda
   
   return (
     <div className="w-full flex items-center justify-between px-4 pb-2">
@@ -75,6 +88,8 @@ export function Header({ onSearch, showSearch = false }: HeaderProps) {
             onSearch={handleSearch}
           />
         )}
+        {/* Notifications sur / et /projects */}
+        {((isRootPage && showSearch) || isProjectsPage) && <NotificationIcon />}
         {showShareButton && (
           <Button
             variant="ghost"
@@ -85,6 +100,8 @@ export function Header({ onSearch, showSearch = false }: HeaderProps) {
             <Link className="h-[1.2rem] w-[1.2rem]" />
           </Button>
         )}
+        {/* Notifications sur /agenda après l'icône partage */}
+        {isAgendaPage && <NotificationIcon />}
         <ThemeToggle />
       </div>
     </div>

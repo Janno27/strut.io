@@ -12,6 +12,7 @@ import { ProjectEditDialog } from "./project-edit-dialog";
 import { Plus, MoreHorizontal, Pencil, Trash } from "lucide-react";
 import { PackageTable } from "../package-table";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { ProjectPageSkeleton } from "../skeletons/project-skeleton";
 
 export function ProjectTabs() {
   const [clients, setClients] = useState<any[]>([]);
@@ -330,7 +331,7 @@ export function ProjectTabs() {
           </div>
 
           {isLoading ? (
-            <div className="text-center py-8">Chargement des projets...</div>
+            <ProjectPageSkeleton />
           ) : projects.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground mb-4">Aucun projet trouvé.</p>

@@ -8,29 +8,30 @@ import { Clock, User, TrendingUp } from 'lucide-react';
 import { SlotWithAppointment } from '@/lib/types/agenda';
 import { AgentCalendar } from './agent-calendar';
 import { Badge } from '@/components/ui/badge';
+import { AgendaTabsSkeleton } from './skeletons/agenda-skeleton';
 
 export function AgendaTabs() {
   const { profile } = useAuth();
   const { getAgentSlots, loading } = useAgenda();
   const [slots, setSlots] = useState<SlotWithAppointment[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const loadSlots = async () => {
     const agentSlots = await getAgentSlots();
     setSlots(agentSlots);
+    setIsInitialLoading(false);
   };
 
   useEffect(() => {
     if (profile?.role === 'agent') {
       loadSlots();
+    } else if (profile) {
+      setIsInitialLoading(false);
     }
   }, [profile]);
 
-  if (!profile) {
-    return (
-      <div className="text-center text-muted-foreground">
-        Chargement...
-      </div>
-    );
+  if (!profile || isInitialLoading) {
+    return <AgendaTabsSkeleton />;
   }
 
   if (profile.role !== 'agent') {
@@ -102,61 +103,11 @@ export function AgendaTabs() {
 
       {/* Calendrier */}
       <div className="space-y-4">
-        <AgentCalendar slots={slots} onSlotsChange={loadSlots} />
-      </div>
-
-      {/* Prochains rendez-vous */}
-      <div className="space-y-4">
-        {loading ? (
-          <div className="text-center text-muted-foreground py-8">
-            Chargement...
-          </div>
-        ) : upcomingAppointments.length > 0 ? (
-          <div className="space-y-2">
-            {upcomingAppointments.map((slot) => (
-              <div key={slot.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-4">
-                    <div>
-                      <p className="font-medium">{slot.title || 'Rendez-vous'}</p>
-                      {slot.appointment && (
-                        <p className="text-sm font-medium text-blue-600">
-                          avec {slot.appointment.model_name}
-                        </p>
-                      )}
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(slot.start_datetime).toLocaleDateString('fr-FR', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(slot.start_datetime).toLocaleTimeString('fr-FR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })} - {new Date(slot.end_datetime).toLocaleTimeString('fr-FR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary">
-                    Confirmé
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-muted-foreground py-8">
-            Aucun rendez-vous à venir.
-          </div>
-        )}
+        <AgentCalendar 
+          slots={slots} 
+          onSlotsChange={loadSlots} 
+          upcomingAppointments={upcomingAppointments}
+        />
       </div>
 
     </div>

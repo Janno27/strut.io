@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAgenda } from '@/hooks/use-agenda';
 import { useToast } from '@/components/ui/use-toast';
-import { ChevronLeft, ChevronRight, Trash2, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2, Calendar, CalendarDays, X } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -17,20 +17,23 @@ import {
 import { ContextMenuPopover } from './context-menu-popover';
 import { CreateEventModal } from './create-event-modal';
 import { SlotContextMenu } from './slot-context-menu';
+import { ConvertAppointmentModal } from './convert-appointment-modal';
 
 type CalendarView = 'day' | 'week' | 'month';
 
 interface AgentCalendarProps {
   slots: SlotWithAppointment[];
   onSlotsChange: () => void;
+  upcomingAppointments?: SlotWithAppointment[];
 }
 
-export function AgentCalendar({ slots, onSlotsChange }: AgentCalendarProps) {
+export function AgentCalendar({ slots, onSlotsChange, upcomingAppointments = [] }: AgentCalendarProps) {
   const { deleteSlot, loading } = useAgenda();
   const { toast } = useToast();
   
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('week');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // États pour le menu contextuel et les modales
   const [contextMenu, setContextMenu] = useState({
@@ -53,6 +56,12 @@ export function AgentCalendar({ slots, onSlotsChange }: AgentCalendarProps) {
     isOpen: false,
     position: { x: 0, y: 0 },
     slot: null as SlotWithAppointment | null,
+  });
+
+  // État pour le modal de conversion en mannequin
+  const [convertModelModal, setConvertModelModal] = useState({
+    isOpen: false,
+    appointmentData: null as SlotWithAppointment | null,
   });
 
   // Fonctions de gestion des actions
@@ -224,7 +233,12 @@ export function AgentCalendar({ slots, onSlotsChange }: AgentCalendarProps) {
 
   // Fermer le menu contextuel des créneaux
   useEffect(() => {
-    const handleClickAway = () => {
+    const handleClickAway = (event: MouseEvent) => {
+      const target = event.target as Element;
+      // Ne ferme pas le menu si on clique à l'intérieur du menu contextuel
+      if (target.closest('[data-slot-context-menu]')) {
+        return;
+      }
       setSlotContextMenu(prev => ({ ...prev, isOpen: false }));
     };
 
@@ -238,6 +252,9 @@ export function AgentCalendar({ slots, onSlotsChange }: AgentCalendarProps) {
   const handleSlotContextMenu = (e: React.MouseEvent, slot: SlotWithAppointment) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    console.log("Menu contextuel ouvert pour le slot:", slot);
+    console.log("Le slot a un appointment:", !!slot.appointment);
     
     setSlotContextMenu({
       isOpen: true,
@@ -290,6 +307,37 @@ export function AgentCalendar({ slots, onSlotsChange }: AgentCalendarProps) {
         });
       }
     }
+  };
+
+  // Gérer la conversion d'un rendez-vous en mannequin
+  const handleConvertToModel = (slot: SlotWithAppointment) => {
+    console.log("handleConvertToModel appelé avec:", slot);
+    if (slot.appointment) {
+      console.log("Appointment trouvé, ouverture de la modal");
+      setConvertModelModal({
+        isOpen: true,
+        appointmentData: slot,
+      });
+    } else {
+      console.log("Pas d'appointment trouvé dans le slot");
+    }
+  };
+
+  // Fermer le modal de conversion
+  const handleCloseConvertModal = () => {
+    setConvertModelModal({
+      isOpen: false,
+      appointmentData: null,
+    });
+  };
+
+  // Gérer la création du mannequin après conversion
+  const handleModelConverted = () => {
+    toast({
+      title: "Conversion réussie",
+      description: "Le rendez-vous a été converti en profil mannequin avec succès.",
+    });
+    handleCloseConvertModal();
   };
 
   // Fonctions utilitaires pour le calendrier
@@ -506,14 +554,33 @@ export function AgentCalendar({ slots, onSlotsChange }: AgentCalendarProps) {
     );
   }
 
-  return (
-    <div className="space-y-4">
-      {/* Header avec navigation et sélecteur de vue */}
-      <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm" onClick={goToToday}>
-            Aujourd'hui
-          </Button>
+      return (
+    <div className="flex h-full">
+      {/* Contenu principal du calendrier */}
+      <div 
+        className={`transition-all duration-300 space-y-4 ${
+          sidebarOpen ? 'w-3/5 pr-4' : 'w-full'
+        }`}
+      >
+        {/* Header avec navigation et sélecteur de vue */}
+        <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" size="sm" onClick={goToToday}>
+              Aujourd'hui
+            </Button>
+            
+            <Select value={view} onValueChange={(value: CalendarView) => setView(value)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="day">Jour</SelectItem>
+                <SelectItem value="week">Semaine</SelectItem>
+                <SelectItem value="month">Mois</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
           <div className="flex items-center space-x-2">
             <Button
               variant="ghost"
@@ -532,20 +599,16 @@ export function AgentCalendar({ slots, onSlotsChange }: AgentCalendarProps) {
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="ml-2"
+            >
+              <CalendarDays className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-        
-        <Select value={view} onValueChange={(value: CalendarView) => setView(value)}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="day">Jour</SelectItem>
-            <SelectItem value="week">Semaine</SelectItem>
-            <SelectItem value="month">Mois</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
 
       {/* Vue jour */}
       {view === 'day' && (
@@ -804,6 +867,8 @@ export function AgentCalendar({ slots, onSlotsChange }: AgentCalendarProps) {
         position={slotContextMenu.position}
         onEdit={() => slotContextMenu.slot && openEditModal(slotContextMenu.slot)}
         onDelete={() => slotContextMenu.slot && handleDeleteSlotFromContext(slotContextMenu.slot)}
+        onConvert={() => slotContextMenu.slot && handleConvertToModel(slotContextMenu.slot)}
+        hasAppointment={!!slotContextMenu.slot?.appointment}
       />
 
       {/* Modale de création/édition d'événement */}
@@ -819,6 +884,84 @@ export function AgentCalendar({ slots, onSlotsChange }: AgentCalendarProps) {
         editingSlot={eventModal.editingSlot}
         viewOnly={eventModal.viewOnly}
       />
+
+      {/* Modal de conversion en mannequin */}
+      <ConvertAppointmentModal
+        isOpen={convertModelModal.isOpen}
+        onClose={handleCloseConvertModal}
+        onSuccess={handleModelConverted}
+        appointmentData={convertModelModal.appointmentData}
+      />
+      </div>
+
+      {/* Sidebar coulissant pour les rendez-vous à venir */}
+      <div 
+        className={`transition-all duration-300 border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${
+          sidebarOpen ? 'w-2/5 opacity-100' : 'w-0 opacity-0 overflow-hidden'
+        }`}
+      >
+        {sidebarOpen && (
+          <div className="p-4 h-full flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Prochains rendez-vous</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="flex-1 overflow-auto">
+              {loading ? (
+                <div className="text-center text-muted-foreground py-8">
+                  Chargement...
+                </div>
+              ) : upcomingAppointments.length > 0 ? (
+                <div className="space-y-3">
+                  {upcomingAppointments.map((slot) => (
+                    <div key={slot.id} className="p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div>
+                        {slot.appointment && (
+                          <p className="text-sm font-medium text-violet-400/80 mb-1">
+                            avec {slot.appointment.model_name}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(slot.start_datetime).toLocaleDateString('fr-FR', {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'long',
+                          })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(slot.start_datetime).toLocaleTimeString('fr-FR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })} - {new Date(slot.end_datetime).toLocaleTimeString('fr-FR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-end mt-2">
+                        <Badge variant="secondary" className="text-xs">
+                          Confirmé
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground py-8 text-sm">
+                  Aucun rendez-vous à venir.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 

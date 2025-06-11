@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -21,14 +21,16 @@ import { DefaultAvatar } from "@/components/ui/default-avatar"
 import { ImageCropper } from "@/components/ui/image-cropper"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
+import { SlotWithAppointment } from "@/lib/types/agenda"
 
 interface AddModelModalProps {
   isOpen: boolean
   onClose: () => void
   onModelAdded?: () => void
+  appointmentData?: SlotWithAppointment
 }
 
-export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalProps) {
+export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }: AddModelModalProps) {
   // Supabase client
   const supabase = createClient()
   const { profile } = useAuth()
@@ -69,6 +71,31 @@ export function AddModelModal({ isOpen, onClose, onModelAdded }: AddModelModalPr
     modelsComLink: "",
     description: ""
   })
+
+  // Pré-remplir le formulaire avec les données du rendez-vous si disponibles
+  useEffect(() => {
+    if (appointmentData?.appointment) {
+      const appointment = appointmentData.appointment;
+      const nameParts = appointment.model_name?.split(' ') || [];
+      
+      setFormData({
+        firstName: nameParts[0] || "",
+        lastName: nameParts.slice(1).join(' ') || "",
+        gender: "female", // Par défaut, à ajuster si l'info est disponible
+        age: "",
+        height: "",
+        bust: "",
+        waist: "",
+        hips: "",
+        shoeSize: "",
+        eyeColor: "",
+        hairColor: "",
+        instagram: appointment.model_instagram?.replace('@', '') || "",
+        modelsComLink: "",
+        description: appointment.notes || ""
+      });
+    }
+  }, [appointmentData]);
 
   // Gérer les changements dans le formulaire
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

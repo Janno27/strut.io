@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PackageTableSkeleton } from "../skeletons/project-skeleton";
 
 export interface PackageTableProps {
   projectId: string;
@@ -387,7 +388,7 @@ export function PackageTable({ projectId }: PackageTableProps) {
   return (
     <div>
       {isLoading ? (
-        <div className="text-center py-8">Chargement des packages...</div>
+        <PackageTableSkeleton />
       ) : (
         <PackageList 
           packages={packages} 
