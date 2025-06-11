@@ -15,15 +15,28 @@ import {
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 import { UserIcon, LogOut, Settings, User, FolderKanban, Home, LayoutDashboard, LogIn, UserPlus } from "lucide-react";
+import { AccountSettingsModal } from "./settings/account-settings-modal";
 
 export function UserMenu() {
   const { user, profile, signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTab, setModalTab] = useState<"account" | "settings">("account");
 
   const handleSignOut = async () => {
     setIsLoading(true);
     await signOut();
     setIsLoading(false);
+  };
+
+  const handleOpenAccount = () => {
+    setModalTab("account");
+    setIsModalOpen(true);
+  };
+
+  const handleOpenSettings = () => {
+    setModalTab("settings");
+    setIsModalOpen(true);
   };
 
   // Obtenir les initiales de l'utilisateur pour l'avatar
@@ -103,17 +116,13 @@ export function UserMenu() {
             
             {/* Liens de compte */}
             <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link href="/account" className="flex items-center cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Mon compte</span>
-                </Link>
+              <DropdownMenuItem onClick={handleOpenAccount} className="flex items-center cursor-pointer">
+                <User className="mr-2 h-4 w-4" />
+                <span>Mon compte</span>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/settings" className="flex items-center cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Paramètres</span>
-                </Link>
+              <DropdownMenuItem onClick={handleOpenSettings} className="flex items-center cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Paramètres</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             
@@ -157,6 +166,13 @@ export function UserMenu() {
           </>
         )}
       </DropdownMenuContent>
+      
+      {/* Modal Account/Settings */}
+      <AccountSettingsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        defaultTab={modalTab}
+      />
     </DropdownMenu>
   );
 } 
