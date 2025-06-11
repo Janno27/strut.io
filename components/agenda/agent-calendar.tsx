@@ -253,9 +253,6 @@ export function AgentCalendar({ slots, onSlotsChange, upcomingAppointments = [] 
     e.preventDefault();
     e.stopPropagation();
     
-    console.log("Menu contextuel ouvert pour le slot:", slot);
-    console.log("Le slot a un appointment:", !!slot.appointment);
-    
     setSlotContextMenu({
       isOpen: true,
       position: { x: e.clientX, y: e.clientY },
@@ -311,15 +308,11 @@ export function AgentCalendar({ slots, onSlotsChange, upcomingAppointments = [] 
 
   // Gérer la conversion d'un rendez-vous en mannequin
   const handleConvertToModel = (slot: SlotWithAppointment) => {
-    console.log("handleConvertToModel appelé avec:", slot);
     if (slot.appointment) {
-      console.log("Appointment trouvé, ouverture de la modal");
       setConvertModelModal({
         isOpen: true,
         appointmentData: slot,
       });
-    } else {
-      console.log("Pas d'appointment trouvé dans le slot");
     }
   };
 

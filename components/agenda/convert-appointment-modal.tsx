@@ -118,8 +118,6 @@ export function ConvertAppointmentModal({
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase();
   };
-
-  console.log("ConvertAppointmentModal rendu:", { isOpen, showCreateModal, appointmentData: !!appointmentData });
   
   if (!appointmentData?.appointment) return null;
 

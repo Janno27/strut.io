@@ -22,8 +22,6 @@ export function SlotContextMenu({
   onConvert,
   hasAppointment = false,
 }: SlotContextMenuProps) {
-  console.log("SlotContextMenu rendu:", { isOpen, hasAppointment, onConvert: !!onConvert });
-  
   if (!isOpen) return null;
 
   return (
@@ -41,7 +39,6 @@ export function SlotContextMenu({
             variant="ghost"
             className="w-full justify-start h-auto py-2 px-3 text-sm text-violet-600 hover:text-violet-700 hover:bg-violet-50"
             onClick={(e) => {
-              console.log("Bouton Convertir cliqué");
               e.stopPropagation(); // Empêche la propagation du clic
               onConvert();
               onClose();
