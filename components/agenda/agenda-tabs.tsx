@@ -146,7 +146,7 @@ export function AgendaTabs() {
                 </div>
                 <div className="flex items-center space-x-2">
                   <Badge variant="secondary">
-                    {slot.appointment?.status === 'confirmed' ? 'Confirmé' : 'En attente'}
+                    Confirmé
                   </Badge>
                 </div>
               </div>

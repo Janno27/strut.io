@@ -26,7 +26,7 @@ interface AgentCalendarProps {
 }
 
 export function AgentCalendar({ slots, onSlotsChange }: AgentCalendarProps) {
-  const { deleteSlot, updateAppointmentStatus, loading } = useAgenda();
+  const { deleteSlot, loading } = useAgenda();
   const { toast } = useToast();
   
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -75,22 +75,7 @@ export function AgentCalendar({ slots, onSlotsChange }: AgentCalendarProps) {
     }
   };
 
-  const handleUpdateAppointmentStatus = async (appointmentId: string, status: 'confirmed' | 'cancelled') => {
-    const success = await updateAppointmentStatus(appointmentId, status);
-    if (success) {
-      toast({
-        title: "Succès",
-        description: `Rendez-vous ${status === 'confirmed' ? 'confirmé' : 'annulé'}.`,
-      });
-      onSlotsChange();
-    } else {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de la mise à jour du rendez-vous.",
-        variant: "destructive",
-      });
-    }
-  };
+
 
   // Fonctions de navigation
   const navigateDate = (direction: 'prev' | 'next') => {
