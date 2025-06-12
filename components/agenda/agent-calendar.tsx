@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAgenda } from '@/hooks/use-agenda';
 import { useToast } from '@/components/ui/use-toast';
-import { ChevronLeft, ChevronRight, Trash2, Calendar, CalendarDays, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2, CalendarDays, X } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -538,14 +538,7 @@ export function AgentCalendar({ slots, onSlotsChange, upcomingAppointments = [] 
     }
   };
 
-  if (slots.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-8 border rounded-lg">
-        <Calendar className="mx-auto h-12 w-12 mb-4 opacity-50" />
-        <p>Aucun créneau créé. Créez votre premier créneau pour commencer !</p>
-      </div>
-    );
-  }
+  // Le calendrier s'affiche toujours, même vide
 
       return (
     <div className="flex h-full">
