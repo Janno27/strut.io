@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
-import { ModelFormData } from "../types"
+import { ModelFormData, FocalPoint } from "../types"
 
 interface UseModelSaveProps {
   modelId: string
@@ -14,7 +14,9 @@ export function useModelSave({ modelId, onModelUpdated, setIsLoading }: UseModel
   const saveModel = async (
     formData: ModelFormData,
     uploadNewImages: () => Promise<{ newMainImageUrl: string; newAdditionalImageUrls: string[] }>,
-    saveImagesAndCleanup: () => void
+    saveImagesAndCleanup: () => void,
+    mainImageFocalPoint?: FocalPoint,
+    additionalImagesFocalPoints?: Record<string, FocalPoint>
   ) => {
     try {
       // Validation de l'ID du modèle
@@ -42,7 +44,9 @@ export function useModelSave({ modelId, onModelUpdated, setIsLoading }: UseModel
         models_com_link: formData.modelsComLink || null,
         description: formData.description || null,
         main_image: newMainImageUrl,
-        additional_images: newAdditionalImageUrls
+        additional_images: newAdditionalImageUrls,
+        main_image_focal_point: mainImageFocalPoint || null,
+        additional_images_focal_points: additionalImagesFocalPoints || null
       }
       
       const { error } = await supabase

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
-import { AddModelFormData, ModelImageUploadResult } from "../types"
+import { AddModelFormData, ModelImageUploadResult, FocalPoint } from "../types"
 import { generateDefaultImage, generateFileName } from "../utils/model-utils"
 
 interface UseModelSubmissionProps {
@@ -35,12 +35,7 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
       let mainImageUrl = "";
       const filePath = generateFileName(finalMainImageFile.name, 'main', agentId);
       
-      console.log("Upload image principale:", { 
-        bucket: 'models', 
-        path: filePath, 
-        size: finalMainImageFile.size,
-        type: finalMainImageFile.type
-      });
+
       
       // Upload avec options optimisées pour la qualité
       const uploadResult = await supabase.storage
@@ -62,7 +57,7 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
         throw new Error("Impossible d'obtenir l'URL publique de l'image principale");
       }
       mainImageUrl = mainImageData.publicUrl;
-      console.log("URL de l'image principale:", mainImageUrl);
+
 
       // Télécharger les images supplémentaires
       const additionalImageUrls: string[] = [];
@@ -70,11 +65,7 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
         const file = additionalImageFiles[i];
         const filePath = generateFileName(file.name, 'additional', agentId, i);
         
-        console.log(`Upload image supplémentaire ${i + 1}:`, {
-          path: filePath,
-          size: file.size,
-          type: file.type
-        });
+
         
         const uploadResult = await supabase.storage
           .from('models')
@@ -107,7 +98,10 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
   const submitModel = async (
     formData: AddModelFormData,
     mainImageFile: File | null,
-    additionalImageFiles: File[]
+    additionalImageFiles: File[],
+    mainImageFocalPoint?: FocalPoint,
+    additionalImagesFocalPoints?: Record<string, FocalPoint>,
+    additionalImages?: string[] // Ajouter l'ordre des images
   ): Promise<boolean> => {
     try {
       if (!agentId) {
@@ -120,7 +114,23 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
         additionalImageFiles, 
         formData
       );
-      console.log("Images téléchargées avec succès:", { mainImageUrl, additionalImageUrls });
+
+      
+      // Mapper les focal points des images supplémentaires avec les nouvelles URLs
+      let mappedAdditionalImagesFocalPoints: Record<string, FocalPoint> | null = null;
+      if (additionalImagesFocalPoints && additionalImages && Object.keys(additionalImagesFocalPoints).length > 0) {
+        mappedAdditionalImagesFocalPoints = {};
+        
+        // Mapper les focal points en utilisant l'ordre des images dans additionalImages
+        additionalImages.forEach((tempUrl, index) => {
+          const newUrl = additionalImageUrls[index];
+          const focalPoint = additionalImagesFocalPoints[tempUrl];
+          
+          if (focalPoint && newUrl) {
+            mappedAdditionalImagesFocalPoints![newUrl] = focalPoint;
+          }
+        });
+      }
       
       // Préparer les données du modèle
       const modelData = {
@@ -140,10 +150,12 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
         description: formData.description || null,
         main_image: mainImageUrl,
         additional_images: additionalImageUrls,
+        main_image_focal_point: mainImageFocalPoint || null,
+        additional_images_focal_points: mappedAdditionalImagesFocalPoints,
         agent_id: agentId
       };
       
-      console.log("Données du modèle à insérer:", modelData);
+
       
       // Insérer les données dans la table models
       const insertResult = await supabase
@@ -155,7 +167,7 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
         throw insertResult.error;
       }
       
-      console.log("Modèle ajouté avec succès:", insertResult);
+
       toast.success("Le modèle a été ajouté avec succès");
       
       return true;

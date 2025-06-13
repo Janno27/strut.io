@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
-import { ModelDetailProps } from "../types"
+import { ModelDetailProps, FocalPoint } from "../types"
 
 interface UseImageManagementProps {
   model: ModelDetailProps['model']
@@ -22,11 +22,17 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1)
   
-  // État pour le recadrage
-  const [isCropperOpen, setIsCropperOpen] = useState(false)
-  const [cropImageUrl, setCropImageUrl] = useState("")
-  const [cropImageType, setCropImageType] = useState<"main" | "additional">("main")
-  const [cropImageIndex, setCropImageIndex] = useState<number>(-1)
+  // État pour le repositionnement d'image
+  const [isPositionEditorOpen, setIsPositionEditorOpen] = useState(false)
+  const [positionImageUrl, setPositionImageUrl] = useState("")
+  const [positionImageType, setPositionImageType] = useState<"main" | "additional">("main")
+  const [positionImageIndex, setPositionImageIndex] = useState<number>(-1)
+  
+  // États pour les focal points
+  const [mainImageFocalPoint, setMainImageFocalPoint] = useState<FocalPoint | undefined>(model.main_image_focal_point)
+  const [additionalImagesFocalPoints, setAdditionalImagesFocalPoints] = useState<Record<string, FocalPoint>>(
+    model.additional_images_focal_points || {}
+  )
   
   const supabase = createClient()
   
@@ -43,7 +49,7 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
     });
   };
   
-  // Initialisation des images
+  // Initialisation des images et focal points
   useEffect(() => {
     if (model) {
       // Nettoyer les anciennes URLs blob avant d'initialiser les nouvelles
@@ -55,6 +61,10 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
       setTempAdditionalImages([])
       setImagesToDelete([])
       setImageOrder(model.additionalImages || [])
+      
+      // Initialiser les focal points depuis le modèle
+      setMainImageFocalPoint(model.main_image_focal_point)
+      setAdditionalImagesFocalPoints(model.additional_images_focal_points || {})
     }
   }, [model])
 
@@ -78,7 +88,14 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
 
   // Réinitialiser les images
   const resetImages = () => {
-    const urlsToClean = [tempMainImage, ...tempAdditionalImages].filter((url): url is string => Boolean(url));
+    // Nettoyer toutes les URLs blob avant de réinitialiser
+    const urlsToClean = [
+      tempMainImage, 
+      ...tempAdditionalImages,
+      // Nettoyer aussi les URLs de crop qui pourraient être orphelines
+      ...(imageOrder.filter(url => url && url.startsWith('blob:')))
+    ].filter((url): url is string => Boolean(url));
+    
     cleanupBlobUrls(urlsToClean);
     
     setTempMainImage(null)
@@ -87,6 +104,16 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
     setAdditionalImageFiles([])
     setImagesToDelete([])
     setImageOrder(model.additionalImages || [])
+    
+    // Réinitialiser aussi les états de repositionnement
+    setIsPositionEditorOpen(false)
+    setPositionImageUrl("")
+    setPositionImageType("main")
+    setPositionImageIndex(-1)
+    
+    // Réinitialiser les focal points aux valeurs du modèle
+    setMainImageFocalPoint(model.main_image_focal_point)
+    setAdditionalImagesFocalPoints(model.additional_images_focal_points || {})
   }
 
   // Gestion de l'image principale
@@ -150,8 +177,11 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
       setAdditionalImageFiles(prev => prev.filter((_, i) => i !== tempIndex))
       cleanupBlobUrls([imageToRemove])
     } else if ((model.additionalImages || []).includes(imageToRemove)) {
-      // Image existante
+      // Image existante de la BDD
       setImagesToDelete(prev => [...prev, imageToRemove])
+    } else if (imageToRemove.startsWith('blob:')) {
+      // Image blob orpheline - nettoyer directement
+      cleanupBlobUrls([imageToRemove])
     }
     
     // Retirer de l'ordre
@@ -179,77 +209,54 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
 
   // Créer la liste complète des images supplémentaires pour le drag & drop
   const getAllAdditionalImages = () => {
-    // Utiliser l'ordre défini, filtrer les images supprimées, et ajouter les nouvelles temporaires
-    const orderedExistingImages = imageOrder.filter(img => !imagesToDelete.includes(img))
+    // Utiliser l'ordre défini, filtrer les images supprimées et les blobs orphelins
+    const orderedExistingImages = imageOrder.filter(img => 
+      !imagesToDelete.includes(img) && 
+      // Filtrer les URLs blob qui ne sont plus dans tempAdditionalImages
+      (!img.startsWith('blob:') || tempAdditionalImages.includes(img))
+    )
     const newTempImages = tempAdditionalImages.filter(img => !imageOrder.includes(img))
     return [...orderedExistingImages, ...newTempImages]
   }
 
-  // Gestion du recadrage
-  const handleMainImageCrop = () => {
+  // Gestion du repositionnement d'images
+  const handleMainImageReposition = () => {
     const currentMainImage = tempMainImage || model.imageUrl
     if (currentMainImage) {
-      setCropImageUrl(currentMainImage)
-      setCropImageType("main")
-      setCropImageIndex(-1)
-      setIsCropperOpen(true)
+      setPositionImageUrl(currentMainImage)
+      setPositionImageType("main")
+      setPositionImageIndex(-1)
+      setIsPositionEditorOpen(true)
     }
   }
 
-  const handleAdditionalImageCrop = (index: number) => {
+  const handleAdditionalImageReposition = (index: number) => {
     const allImages = getAllAdditionalImages()
     const imageUrl = allImages[index]
     if (imageUrl) {
-      setCropImageUrl(imageUrl)
-      setCropImageType("additional")
-      setCropImageIndex(index)
-      setIsCropperOpen(true)
+      setPositionImageUrl(imageUrl)
+      setPositionImageType("additional")
+      setPositionImageIndex(index)
+      setIsPositionEditorOpen(true)
     }
   }
 
-  const handleCropComplete = (croppedImageFile: File) => {
-    const imageUrl = URL.createObjectURL(croppedImageFile)
-    
-    if (cropImageType === "main") {
-      // Libérer l'ancienne URL si elle existe
-      if (tempMainImage) {
-        cleanupBlobUrls([tempMainImage])
-      }
-      setTempMainImage(imageUrl)
-      setMainImageFile(croppedImageFile)
-    } else if (cropImageType === "additional" && cropImageIndex >= 0) {
+  const handlePositionComplete = (focalPoint: FocalPoint) => {
+    if (positionImageType === "main") {
+      setMainImageFocalPoint(focalPoint)
+    } else if (positionImageType === "additional") {
       const allImages = getAllAdditionalImages()
-      const oldImageUrl = allImages[cropImageIndex]
-      
-      // Si c'est une image temporaire, la remplacer
-      if (tempAdditionalImages.includes(oldImageUrl)) {
-        const tempIndex = tempAdditionalImages.indexOf(oldImageUrl)
-        cleanupBlobUrls([oldImageUrl])
-        
-        const newTempImages = [...tempAdditionalImages]
-        const newFiles = [...additionalImageFiles]
-        newTempImages[tempIndex] = imageUrl
-        newFiles[tempIndex] = croppedImageFile
-        
-        setTempAdditionalImages(newTempImages)
-        setAdditionalImageFiles(newFiles)
-        
-        // Mettre à jour l'ordre
-        const newOrder = imageOrder.map(img => img === oldImageUrl ? imageUrl : img)
-        setImageOrder(newOrder)
-      } else {
-        // Si c'est une image existante, l'ajouter comme nouvelle image temporaire
-        setTempAdditionalImages(prev => [...prev, imageUrl])
-        setAdditionalImageFiles(prev => [...prev, croppedImageFile])
-        
-        // Marquer l'ancienne pour suppression et ajouter la nouvelle à l'ordre
-        setImagesToDelete(prev => [...prev, oldImageUrl])
-        const newOrder = imageOrder.map(img => img === oldImageUrl ? imageUrl : img)
-        setImageOrder(newOrder)
-      }
+      const imageUrl = allImages[positionImageIndex]
+      setAdditionalImagesFocalPoints(prev => ({
+        ...prev,
+        [imageUrl]: focalPoint
+      }))
     }
     
-    setIsCropperOpen(false)
+    setIsPositionEditorOpen(false)
+    setPositionImageUrl("")
+    setPositionImageType("main")
+    setPositionImageIndex(-1)
   }
 
   // Gestion de la modal d'image
@@ -383,11 +390,15 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
     selectedImage,
     selectedImageIndex,
     
-    // États de recadrage
-    isCropperOpen,
-    cropImageUrl,
-    cropImageType,
-    cropImageIndex,
+    // États de repositionnement
+    isPositionEditorOpen,
+    positionImageUrl,
+    positionImageType,
+    positionImageIndex,
+    
+    // États des focal points
+    mainImageFocalPoint,
+    additionalImagesFocalPoints,
     
     // Actions principales
     resetImages,
@@ -398,17 +409,17 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
     // Actions image principale
     handleMainImageUpload,
     handleMainImageRemove,
-    handleMainImageCrop,
+    handleMainImageReposition,
     
     // Actions images supplémentaires
     handleAdditionalImageAdd,
     handleAdditionalImageRemoveByIndex,
     handleAdditionalImagesReorder,
-    handleAdditionalImageCrop,
+    handleAdditionalImageReposition,
     
-    // Actions recadrage
-    handleCropComplete,
-    setIsCropperOpen,
+    // Actions repositionnement
+    handlePositionComplete,
+    setIsPositionEditorOpen,
     
     // Actions modal image
     handleImageClick,

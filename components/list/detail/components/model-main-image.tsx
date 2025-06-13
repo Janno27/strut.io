@@ -1,15 +1,17 @@
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { Upload, X } from "lucide-react"
+import { Upload, X, Move } from "lucide-react"
+import { FocalPoint } from "../types"
 
 interface ModelMainImageProps {
   imageUrl: string
   name: string
   isEditing: boolean
   tempMainImage?: string | null
+  focalPoint?: FocalPoint
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onImageRemove?: () => void
-  onImageCrop: () => void
+  onImageReposition: () => void
 }
 
 export function ModelMainImage({
@@ -17,19 +19,23 @@ export function ModelMainImage({
   name,
   isEditing,
   tempMainImage,
+  focalPoint,
   onImageUpload,
   onImageRemove,
-  onImageCrop
+  onImageReposition
 }: ModelMainImageProps) {
   if (!isEditing) {
-    // Mode affichage
+    // Mode affichage - Format uniforme pour la grille avec focal point
+    const objectPosition = focalPoint ? `${focalPoint.x}% ${focalPoint.y}%` : 'center'
+    
     return (
-      <div className="relative aspect-square">
+      <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
         <Image
           src={imageUrl}
           alt={name}
           fill
           className="object-cover"
+          style={{ objectPosition }}
           sizes="(max-width: 768px) 100vw, 50vw"
           priority
         />
@@ -65,6 +71,7 @@ export function ModelMainImage({
             alt={name}
             fill
             className="object-cover"
+            style={{ objectPosition: focalPoint ? `${focalPoint.x}% ${focalPoint.y}%` : 'center' }}
             sizes="(max-width: 768px) 100vw, 50vw"
           />
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
@@ -82,9 +89,10 @@ export function ModelMainImage({
               <Button
                 variant="secondary"
                 className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-                onClick={onImageCrop}
+                onClick={onImageReposition}
               >
-                Recadrer l'image
+                <Move className="h-4 w-4 mr-2" />
+                Repositionner
               </Button>
             </div>
           </div>

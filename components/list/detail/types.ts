@@ -1,3 +1,8 @@
+export interface FocalPoint {
+  x: number  // Pourcentage 0-100
+  y: number  // Pourcentage 0-100
+}
+
 export interface Model {
   id: string
   name: string
@@ -18,6 +23,9 @@ export interface Model {
   first_name?: string
   last_name?: string
   agent_id?: string
+  // Focal points pour repositionner les images dans leurs previews
+  main_image_focal_point?: FocalPoint
+  additional_images_focal_points?: Record<string, FocalPoint>
 }
 
 export interface ModelFormData {
@@ -81,14 +89,16 @@ export interface ModelEditFormProps {
   // Gestion des images
   mainImage?: string | null
   additionalImages?: string[]
+  mainImageFocalPoint?: FocalPoint
+  additionalImagesFocalPoints?: Record<string, FocalPoint>
   onMainImageUpload?: (e: React.ChangeEvent<HTMLInputElement>) => void
   onMainImageRemove?: () => void
   onMainImageEdit?: () => void
-  onMainImageCrop?: () => void
+  onMainImageReposition?: () => void
   onAdditionalImagesChange?: (images: string[]) => void
   onAdditionalImageAdd?: (e: React.ChangeEvent<HTMLInputElement>) => void
   onAdditionalImageRemove?: (index: number) => void
-  onAdditionalImageCrop?: (index: number) => void
+  onAdditionalImageReposition?: (index: number) => void
   showImageManagement?: boolean
 }
 

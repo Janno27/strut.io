@@ -1,25 +1,32 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Upload, X, Edit, Camera, Crop } from "lucide-react"
+import { Upload, X, Edit, Camera, Move } from "lucide-react"
 import Image from "next/image"
+
+interface FocalPoint {
+  x: number
+  y: number
+}
 
 interface MainImageUploaderProps {
   image: string | null
+  focalPoint?: FocalPoint
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onImageRemove: () => void
   onImageEdit?: () => void
-  onImageCrop?: () => void
+  onImageReposition?: () => void
   className?: string
   height?: string
 }
 
 export function MainImageUploader({
   image,
+  focalPoint,
   onImageUpload,
   onImageRemove,
   onImageEdit,
-  onImageCrop,
+  onImageReposition,
   className = "",
   height = "h-80"
 }: MainImageUploaderProps) {
@@ -32,23 +39,24 @@ export function MainImageUploader({
             alt="Photo principale"
             fill
             className="object-cover rounded-lg"
+            style={focalPoint ? { objectPosition: `${focalPoint.x}% ${focalPoint.y}%` } : undefined}
             sizes="(max-width: 768px) 100vw, 33vw"
           />
           
           {/* Overlay avec les contrôles */}
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center rounded-lg">
             <div className="flex gap-2">
-              {/* Bouton recadrer */}
-              {onImageCrop && (
+              {/* Bouton repositionner */}
+              {onImageReposition && (
                 <Button
                   type="button"
                   variant="secondary"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={onImageCrop}
-                  title="Recadrer l'image"
+                  onClick={onImageReposition}
+                  title="Repositionner l'image"
                 >
-                  <Crop className="h-4 w-4" />
+                  <Move className="h-4 w-4" />
                 </Button>
               )}
               

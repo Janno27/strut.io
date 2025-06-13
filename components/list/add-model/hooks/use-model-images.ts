@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { validateAndProcessImage } from "../utils/model-utils"
+import { FocalPoint } from "../types"
 
 export function useModelImages() {
   // État pour les images
@@ -9,11 +10,28 @@ export function useModelImages() {
   const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([])
   
-  // État pour le recadrage
-  const [isCropperOpen, setIsCropperOpen] = useState(false)
-  const [cropImageUrl, setCropImageUrl] = useState("")
-  const [cropImageType, setCropImageType] = useState<"main" | "additional">("main")
-  const [cropImageIndex, setCropImageIndex] = useState<number>(-1)
+  // État pour le repositionnement d'image
+  const [isPositionEditorOpen, setIsPositionEditorOpen] = useState(false)
+  const [positionImageUrl, setPositionImageUrl] = useState("")
+  const [positionImageType, setPositionImageType] = useState<"main" | "additional">("main")
+  const [positionImageIndex, setPositionImageIndex] = useState<number>(-1)
+  
+  // États pour les focal points
+  const [mainImageFocalPoint, setMainImageFocalPoint] = useState<FocalPoint | undefined>(undefined)
+  const [additionalImagesFocalPoints, setAdditionalImagesFocalPoints] = useState<Record<string, FocalPoint>>({})
+
+  // Fonction pour nettoyer les URLs blob
+  const cleanupBlobUrls = (urls: string[]) => {
+    urls.forEach(url => {
+      if (url.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          console.warn('Erreur lors du nettoyage de l\'URL blob:', error);
+        }
+      }
+    });
+  };
 
   // Télécharger l'image principale
   const handleMainImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,6 +43,11 @@ export function useModelImages() {
         return;
       }
       
+      // Nettoyer l'ancienne URL blob si elle existe
+      if (mainImage) {
+        cleanupBlobUrls([mainImage]);
+      }
+      
       setMainImageFile(file)
       const imageUrl = URL.createObjectURL(file)
       setMainImage(imageUrl)
@@ -33,11 +56,13 @@ export function useModelImages() {
 
   // Supprimer l'image principale
   const handleMainImageRemove = () => {
+    // Nettoyer l'URL blob avant de supprimer
     if (mainImage) {
-      URL.revokeObjectURL(mainImage)
+      cleanupBlobUrls([mainImage]);
     }
     setMainImage(null)
     setMainImageFile(null)
+    setMainImageFocalPoint(undefined)
   }
 
   // Télécharger des images supplémentaires (multiple)
@@ -92,8 +117,17 @@ export function useModelImages() {
 
   // Supprimer une image supplémentaire
   const handleAdditionalImageRemove = (index: number) => {
+    const imageToRemove = additionalImages[index]
+    
     // Libérer l'URL de l'objet pour éviter les fuites de mémoire
-    URL.revokeObjectURL(additionalImages[index])
+    cleanupBlobUrls([imageToRemove])
+    
+    // Supprimer le focal point associé
+    setAdditionalImagesFocalPoints(prev => {
+      const newFocalPoints = { ...prev }
+      delete newFocalPoints[imageToRemove]
+      return newFocalPoints
+    })
     
     setAdditionalImages(prev => prev.filter((_, i) => i !== index))
     setAdditionalImageFiles(prev => prev.filter((_, i) => i !== index))
@@ -111,78 +145,81 @@ export function useModelImages() {
     setAdditionalImageFiles(newFiles)
   }
 
-  // Ouvrir le recadreur pour l'image principale
-  const handleMainImageCrop = () => {
+  // Gestion du repositionnement d'images
+  const handleMainImageReposition = () => {
     if (mainImage) {
-      setCropImageUrl(mainImage)
-      setCropImageType("main")
-      setCropImageIndex(-1)
-      setIsCropperOpen(true)
+      setPositionImageUrl(mainImage)
+      setPositionImageType("main")
+      setPositionImageIndex(-1)
+      setIsPositionEditorOpen(true)
     }
   }
 
-  // Ouvrir le recadreur pour une image supplémentaire
-  const handleAdditionalImageCrop = (index: number) => {
-    if (additionalImages[index]) {
-      setCropImageUrl(additionalImages[index])
-      setCropImageType("additional")
-      setCropImageIndex(index)
-      setIsCropperOpen(true)
+  const handleAdditionalImageReposition = (index: number) => {
+    const imageUrl = additionalImages[index]
+    if (imageUrl) {
+      setPositionImageUrl(imageUrl)
+      setPositionImageType("additional")
+      setPositionImageIndex(index)
+      setIsPositionEditorOpen(true)
     }
   }
 
-  // Gérer la completion du recadrage
-  const handleCropComplete = (croppedImageFile: File) => {
-    const imageUrl = URL.createObjectURL(croppedImageFile)
-    
-    if (cropImageType === "main") {
-      // Libérer l'ancienne URL si elle existe
-      if (mainImage) {
-        URL.revokeObjectURL(mainImage)
-      }
-      setMainImage(imageUrl)
-      setMainImageFile(croppedImageFile)
-    } else if (cropImageType === "additional" && cropImageIndex >= 0) {
-      // Libérer l'ancienne URL
-      URL.revokeObjectURL(additionalImages[cropImageIndex])
-      
-      // Mettre à jour l'image et le fichier
-      const newImages = [...additionalImages]
-      const newFiles = [...additionalImageFiles]
-      newImages[cropImageIndex] = imageUrl
-      newFiles[cropImageIndex] = croppedImageFile
-      
-      setAdditionalImages(newImages)
-      setAdditionalImageFiles(newFiles)
+  const handlePositionComplete = (focalPoint: FocalPoint) => {
+    if (positionImageType === "main") {
+      setMainImageFocalPoint(focalPoint)
+    } else if (positionImageType === "additional") {
+      const imageUrl = additionalImages[positionImageIndex]
+      setAdditionalImagesFocalPoints(prev => ({
+        ...prev,
+        [imageUrl]: focalPoint
+      }))
     }
     
-    setIsCropperOpen(false)
+    setIsPositionEditorOpen(false)
+    setPositionImageUrl("")
+    setPositionImageType("main")
+    setPositionImageIndex(-1)
   }
 
   // Réinitialiser les images
   const resetImages = () => {
-    // Nettoyer les URLs blob
-    if (mainImage) {
-      URL.revokeObjectURL(mainImage)
-    }
-    additionalImages.forEach(url => URL.revokeObjectURL(url))
+    // Nettoyer toutes les URLs blob pour éviter les fuites mémoire
+    const urlsToClean = [mainImage, ...additionalImages].filter((url): url is string => Boolean(url));
+    cleanupBlobUrls(urlsToClean);
     
     setMainImage(null)
     setAdditionalImages([])
     setMainImageFile(null)
     setAdditionalImageFiles([])
+    
+    // Réinitialiser aussi les états de repositionnement
+    setIsPositionEditorOpen(false)
+    setPositionImageUrl("")
+    setPositionImageType("main")
+    setPositionImageIndex(-1)
+    
+    // Réinitialiser les focal points
+    setMainImageFocalPoint(undefined)
+    setAdditionalImagesFocalPoints({})
   }
 
   return {
-    // États
+    // États des images
     mainImage,
     additionalImages,
     mainImageFile,
     additionalImageFiles,
-    isCropperOpen,
-    cropImageUrl,
-    cropImageType,
-    cropImageIndex,
+    
+    // États de repositionnement
+    isPositionEditorOpen,
+    positionImageUrl,
+    positionImageType,
+    positionImageIndex,
+    
+    // États des focal points
+    mainImageFocalPoint,
+    additionalImagesFocalPoints,
     
     // Actions
     handleMainImageUpload,
@@ -190,10 +227,10 @@ export function useModelImages() {
     handleAdditionalImageUpload,
     handleAdditionalImageRemove,
     handleAdditionalImagesReorder,
-    handleMainImageCrop,
-    handleAdditionalImageCrop,
-    handleCropComplete,
-    setIsCropperOpen,
+    handleMainImageReposition,
+    handleAdditionalImageReposition,
+    handlePositionComplete,
+    setIsPositionEditorOpen,
     resetImages,
   }
 } 

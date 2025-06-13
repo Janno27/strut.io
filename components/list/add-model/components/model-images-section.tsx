@@ -6,14 +6,16 @@ import { ModelImagesSectionProps } from "../types"
 export function ModelImagesSection({
   mainImage,
   additionalImages,
+  mainImageFocalPoint,
+  additionalImagesFocalPoints,
   isLoading,
   onMainImageUpload,
   onMainImageRemove,
-  onMainImageCrop,
+  onMainImageReposition,
   onAdditionalImageUpload,
   onAdditionalImageRemove,
   onAdditionalImagesReorder,
-  onAdditionalImageCrop
+  onAdditionalImageReposition
 }: ModelImagesSectionProps) {
   return (
     <div className="space-y-6">
@@ -22,9 +24,10 @@ export function ModelImagesSection({
         <Label>Photo principale</Label>
         <MainImageUploader
           image={mainImage}
+          focalPoint={mainImageFocalPoint}
           onImageUpload={onMainImageUpload}
           onImageRemove={onMainImageRemove}
-          onImageCrop={onMainImageCrop}
+          onImageReposition={onMainImageReposition}
         />
       </div>
 
@@ -33,10 +36,11 @@ export function ModelImagesSection({
         <Label>Photos supplémentaires</Label>
         <DraggableImageGrid
           images={additionalImages}
+          focalPoints={additionalImagesFocalPoints}
           onImagesChange={onAdditionalImagesReorder}
           onImageAdd={onAdditionalImageUpload}
           onImageRemove={onAdditionalImageRemove}
-          onImageCrop={onAdditionalImageCrop}
+          onImageReposition={onAdditionalImageReposition}
           allowMultiple={true}
           maxImages={10}
         />

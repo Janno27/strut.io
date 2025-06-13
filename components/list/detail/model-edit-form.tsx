@@ -14,14 +14,16 @@ export function ModelEditForm({
   // Gestion des images
   mainImage = null,
   additionalImages = [],
+  mainImageFocalPoint,
+  additionalImagesFocalPoints,
   onMainImageUpload,
   onMainImageRemove,
   onMainImageEdit,
-  onMainImageCrop,
+  onMainImageReposition,
   onAdditionalImagesChange,
   onAdditionalImageAdd,
   onAdditionalImageRemove,
-  onAdditionalImageCrop,
+  onAdditionalImageReposition,
   showImageManagement = false
 }: ModelEditFormProps) {
   return (
@@ -34,10 +36,11 @@ export function ModelEditForm({
             <Label>Photo principale</Label>
             <MainImageUploader
               image={mainImage}
+              focalPoint={mainImageFocalPoint}
               onImageUpload={onMainImageUpload}
               onImageRemove={onMainImageRemove}
               onImageEdit={onMainImageEdit}
-              onImageCrop={onMainImageCrop}
+              onImageReposition={onMainImageReposition}
               height="h-60"
             />
           </div>
@@ -47,10 +50,11 @@ export function ModelEditForm({
             <Label>Photos supplémentaires</Label>
             <DraggableImageGrid
               images={additionalImages}
+              focalPoints={additionalImagesFocalPoints}
               onImagesChange={onAdditionalImagesChange}
               onImageAdd={onAdditionalImageAdd}
               onImageRemove={onAdditionalImageRemove}
-              onImageCrop={onAdditionalImageCrop}
+              onImageReposition={onAdditionalImageReposition}
               allowMultiple={true}
               maxImages={10}
             />

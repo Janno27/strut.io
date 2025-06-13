@@ -1,5 +1,10 @@
 import { SlotWithAppointment } from "@/lib/types/agenda"
 
+export interface FocalPoint {
+  x: number
+  y: number
+}
+
 export interface AddModelFormData {
   firstName: string
   lastName: string
@@ -47,12 +52,14 @@ export interface ModelFormFieldsProps {
 export interface ModelImagesSectionProps {
   mainImage: string | null
   additionalImages: string[]
+  mainImageFocalPoint?: FocalPoint
+  additionalImagesFocalPoints: Record<string, FocalPoint>
   isLoading: boolean
   onMainImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onMainImageRemove: () => void
-  onMainImageCrop: () => void
+  onMainImageReposition: () => void
   onAdditionalImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onAdditionalImageRemove: (index: number) => void
   onAdditionalImagesReorder: (newImages: string[]) => void
-  onAdditionalImageCrop: (index: number) => void
+  onAdditionalImageReposition: (index: number) => void
 } 

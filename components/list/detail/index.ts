@@ -10,6 +10,7 @@ export { useModelSave } from './hooks/use-model-save'
 export { ModelMainImage } from './components/model-main-image'
 export { ModelAdditionalImages } from './components/model-additional-images'
 export { ModelImageModal } from './components/model-image-modal'
+export { ImagePositionEditor } from './components/image-position-editor'
 
 // Types
 export type { ModelDetailProps, ModelFormData } from './types'

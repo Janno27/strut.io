@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { ImageCropper } from "@/components/ui/image-cropper"
+import { ImagePositionEditor } from "@/components/list/detail/components/image-position-editor"
 import { MainImageUploader } from "@/components/ui/main-image-uploader"
 import { DraggableImageGrid } from "@/components/ui/draggable-image-grid"
 import { useAuth } from "@/lib/auth/auth-provider"
@@ -44,17 +44,19 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
     additionalImages,
     mainImageFile,
     additionalImageFiles,
-    isCropperOpen,
-    cropImageUrl,
+    isPositionEditorOpen,
+    positionImageUrl,
+    mainImageFocalPoint,
+    additionalImagesFocalPoints,
     handleMainImageUpload,
     handleMainImageRemove,
     handleAdditionalImageUpload,
     handleAdditionalImageRemove,
     handleAdditionalImagesReorder,
-    handleMainImageCrop,
-    handleAdditionalImageCrop,
-    handleCropComplete,
-    setIsCropperOpen,
+    handleMainImageReposition,
+    handleAdditionalImageReposition,
+    handlePositionComplete,
+    setIsPositionEditorOpen,
     resetImages,
   } = useModelImages()
 
@@ -79,7 +81,14 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
     
     try {
       const finalFormData = getFinalFormData()
-      const success = await submitModel(finalFormData, mainImageFile, additionalImageFiles)
+      const success = await submitModel(
+        finalFormData, 
+        mainImageFile, 
+        additionalImageFiles,
+        mainImageFocalPoint,
+        additionalImagesFocalPoints,
+        additionalImages
+      )
       
       if (success) {
         // Réinitialiser le formulaire et fermer la modale
@@ -112,9 +121,10 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
               <Label>Photo principale</Label>
               <MainImageUploader
                 image={mainImage}
+                focalPoint={mainImageFocalPoint}
                 onImageUpload={handleMainImageUpload}
                 onImageRemove={handleMainImageRemove}
-                onImageCrop={handleMainImageCrop}
+                onImageReposition={handleMainImageReposition}
               />
             </div>
             
@@ -137,10 +147,11 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
             <Label>Photos supplémentaires</Label>
             <DraggableImageGrid
               images={additionalImages}
+              focalPoints={additionalImagesFocalPoints}
               onImagesChange={handleAdditionalImagesReorder}
               onImageAdd={handleAdditionalImageUpload}
               onImageRemove={handleAdditionalImageRemove}
-              onImageCrop={handleAdditionalImageCrop}
+              onImageReposition={handleAdditionalImageReposition}
               allowMultiple={true}
               maxImages={10}
             />
@@ -156,14 +167,18 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
           </div>
         </form>
         
-        {/* Composant de recadrage */}
-        <ImageCropper
-          isOpen={isCropperOpen}
-          onClose={() => setIsCropperOpen(false)}
-          imageUrl={cropImageUrl}
-          onCropComplete={handleCropComplete}
-          aspectRatio={1}
-          title="Recadrer l'image"
+        {/* Éditeur de position d'image */}
+        <ImagePositionEditor
+          isOpen={isPositionEditorOpen}
+          onClose={() => setIsPositionEditorOpen(false)}
+          imageUrl={positionImageUrl}
+          currentFocalPoint={
+            mainImage === positionImageUrl 
+              ? mainImageFocalPoint 
+              : additionalImagesFocalPoints[positionImageUrl]
+          }
+          onPositionComplete={handlePositionComplete}
+          title="Repositionner l'image"
         />
       </DialogContent>
     </Dialog>

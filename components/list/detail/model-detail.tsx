@@ -5,7 +5,7 @@ import { ActionButtons } from "./action-buttons"
 import { DeleteConfirmation } from "./delete-confirmation"
 import { ModelInfo } from "./model-info"
 import { ModelEditForm } from "./model-edit-form"
-import { ImageCropper } from "@/components/ui/image-cropper"
+import { ImagePositionEditor } from "./components/image-position-editor"
 
 // Hooks personnalisés
 import { useModelDetail } from "./hooks/use-model-detail"
@@ -52,21 +52,24 @@ export function ModelDetail({
     selectedImage,
     selectedImageIndex,
     imagesToDelete,
-    isCropperOpen,
-    cropImageUrl,
+    isPositionEditorOpen,
+    positionImageUrl,
+    positionImageType,
+    mainImageFocalPoint,
+    additionalImagesFocalPoints,
     getAllAdditionalImages,
     resetImages,
     uploadNewImages,
     saveImagesAndCleanup,
     handleMainImageUpload,
     handleMainImageRemove,
-    handleMainImageCrop,
+    handleMainImageReposition,
     handleAdditionalImageAdd,
     handleAdditionalImageRemoveByIndex,
     handleAdditionalImagesReorder,
-    handleAdditionalImageCrop,
-    handleCropComplete,
-    setIsCropperOpen,
+    handleAdditionalImageReposition,
+    handlePositionComplete,
+    setIsPositionEditorOpen,
     handleImageClick,
     handleCloseImageModal,
     handleNextImage,
@@ -96,7 +99,13 @@ export function ModelDetail({
 
   // Sauvegarder l'édition
   const handleSaveEdit = async () => {
-    const success = await saveModel(formData, uploadNewImages, saveImagesAndCleanup)
+    const success = await saveModel(
+      formData, 
+      uploadNewImages, 
+      saveImagesAndCleanup,
+      mainImageFocalPoint,
+      additionalImagesFocalPoints
+    )
     if (success) {
       setIsEditing(false)
     }
@@ -133,9 +142,10 @@ export function ModelDetail({
             name={model.name}
             isEditing={isEditing}
             tempMainImage={tempMainImage}
+            focalPoint={mainImageFocalPoint}
             onImageUpload={handleMainImageUpload}
             onImageRemove={handleMainImageRemove}
-            onImageCrop={handleMainImageCrop}
+            onImageReposition={handleMainImageReposition}
           />
         </div>
         
@@ -164,7 +174,7 @@ export function ModelDetail({
       {/* Images additionnelles */}
       <div className="space-y-2">
         <ModelAdditionalImages
-          model={model}
+          model={{ ...model, additional_images_focal_points: additionalImagesFocalPoints }}
           isEditing={isEditing}
           imagesToDelete={imagesToDelete}
           getAllAdditionalImages={getAllAdditionalImages}
@@ -172,7 +182,7 @@ export function ModelDetail({
           onImagesReorder={handleAdditionalImagesReorder}
           onImageAdd={handleAdditionalImageAdd}
           onImageRemove={handleAdditionalImageRemoveByIndex}
-          onImageCrop={handleAdditionalImageCrop}
+          onImageReposition={handleAdditionalImageReposition}
         />
       </div>
       
@@ -188,14 +198,18 @@ export function ModelDetail({
         onPrev={handlePrevImage}
       />
       
-      {/* Composant de recadrage */}
-      <ImageCropper
-        isOpen={isCropperOpen}
-        onClose={() => setIsCropperOpen(false)}
-        imageUrl={cropImageUrl}
-        onCropComplete={handleCropComplete}
-        aspectRatio={1}
-        title="Recadrer l'image"
+      {/* Éditeur de position d'image */}
+      <ImagePositionEditor
+        isOpen={isPositionEditorOpen}
+        onClose={() => setIsPositionEditorOpen(false)}
+        imageUrl={positionImageUrl}
+        currentFocalPoint={
+          positionImageType === "main" 
+            ? mainImageFocalPoint 
+            : additionalImagesFocalPoints[positionImageUrl]
+        }
+        onPositionComplete={handlePositionComplete}
+        title="Repositionner l'image"
       />
     </div>
   )

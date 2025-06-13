@@ -2,18 +2,24 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { GripVertical, Plus, X, Crop } from "lucide-react"
+import { GripVertical, Plus, X, Move } from "lucide-react"
 import Image from "next/image"
+
+interface FocalPoint {
+  x: number
+  y: number
+}
 
 interface DraggableImageGridProps {
   images: string[]
   onImagesChange: (images: string[]) => void
   onImageAdd: (e: React.ChangeEvent<HTMLInputElement>) => void
   onImageRemove: (index: number) => void
-  onImageCrop?: (index: number) => void
+  onImageReposition?: (index: number) => void
   allowMultiple?: boolean
   maxImages?: number
   className?: string
+  focalPoints?: Record<string, FocalPoint>
 }
 
 export function DraggableImageGrid({
@@ -21,10 +27,11 @@ export function DraggableImageGrid({
   onImagesChange,
   onImageAdd,
   onImageRemove,
-  onImageCrop,
+  onImageReposition,
   allowMultiple = true,
   maxImages = 10,
-  className = ""
+  className = "",
+  focalPoints = {}
 }: DraggableImageGridProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
@@ -99,23 +106,28 @@ export function DraggableImageGrid({
             alt={`Photo ${index + 1}`}
             fill
             className="object-cover"
+            style={{ 
+              objectPosition: focalPoints[image] 
+                ? `${focalPoints[image].x}% ${focalPoints[image].y}%` 
+                : 'center' 
+            }}
             sizes="(max-width: 768px) 50vw, 20vw"
           />
           
           {/* Overlay avec les contrôles */}
           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
             <div className="flex gap-2">
-              {/* Bouton recadrer */}
-              {onImageCrop && (
+              {/* Bouton repositionner */}
+              {onImageReposition && (
                 <Button
                   type="button"
                   variant="secondary"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => onImageCrop(index)}
-                  title="Recadrer l'image"
+                  onClick={() => onImageReposition(index)}
+                  title="Repositionner l'image"
                 >
-                  <Crop className="h-4 w-4" />
+                  <Move className="h-4 w-4" />
                 </Button>
               )}
               
