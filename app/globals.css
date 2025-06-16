@@ -120,3 +120,57 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Styles personnalisés pour les cursors des boutons */
+@layer components {
+  /* Tous les boutons */
+  button,
+  .cursor-pointer,
+  [role="button"] {
+    cursor: pointer !important;
+  }
+
+  /* Boutons désactivés */
+  button:disabled,
+  button[disabled],
+  .cursor-pointer:disabled,
+  [role="button"]:disabled {
+    cursor: not-allowed !important;
+  }
+
+  /* Liens et éléments cliquables */
+  a,
+  [role="link"],
+  .clickable {
+    cursor: pointer !important;
+  }
+
+  /* Éléments de formulaire */
+  input[type="file"],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"] {
+    cursor: pointer !important;
+  }
+
+  /* Éléments avec onClick */
+  [onclick] {
+    cursor: pointer !important;
+  }
+
+  /* Classes spécifiques pour les composants UI */
+  .ui-button,
+  .btn,
+  .button {
+    cursor: pointer !important;
+  }
+
+  /* Hover states pour renforcer l'effet */
+  button:hover:not(:disabled),
+  .cursor-pointer:hover:not(:disabled),
+  [role="button"]:hover:not(:disabled),
+  a:hover,
+  [role="link"]:hover {
+    cursor: pointer !important;
+  }
+}

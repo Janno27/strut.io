@@ -83,6 +83,12 @@ export function ModelGrid({
       // En mode normal, on gère aussi l'état local
       setSelectedModelId(id);
       onSelectModel(id);
+      
+      // Scroll vers le haut de la page
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
     }
   };
 
@@ -173,7 +179,7 @@ export function ModelGrid({
                 layoutId={`model-${model.id}-${index}`}
                 initial={false}
                 animate={{
-                  y: selectedModelId && !isSharedView ? detailHeight : 0,
+                  y: selectedModelId && !isSharedView ? Math.max(detailHeight - 500, 0) : 0,
                   opacity: selectedModelId && !isSharedView ? 0.8 : 1,
                   scale: selectedModelId && !isSharedView ? 0.98 : 1,
                 }}
