@@ -31,19 +31,16 @@ export function ModelImageModal({
   const allImages = getAllImages ? getAllImages() : additionalImages
   const displayImages = allImages.filter(img => !imagesToDelete.includes(img))
   const totalImages = displayImages.length
-  
-  // Trouver l'index actuel dans les images affichées
-  const currentDisplayIndex = displayImages.findIndex(img => img === selectedImage)
 
   // Utiliser des refs pour éviter les problèmes de dépendances
-  const currentDisplayIndexRef = useRef(currentDisplayIndex)
+  const selectedIndexRef = useRef(selectedImageIndex)
   const totalImagesRef = useRef(totalImages)
   const onNextRef = useRef(onNext)
   const onPrevRef = useRef(onPrev)
   const onCloseRef = useRef(onClose)
 
   // Mettre à jour les refs
-  currentDisplayIndexRef.current = currentDisplayIndex
+  selectedIndexRef.current = selectedImageIndex
   totalImagesRef.current = totalImages
   onNextRef.current = onNext
   onPrevRef.current = onPrev
@@ -56,13 +53,13 @@ export function ModelImageModal({
         onCloseRef.current()
       } else if (e.key === 'ArrowRight') {
         e.preventDefault()
-        if (currentDisplayIndexRef.current >= 0 && currentDisplayIndexRef.current < totalImagesRef.current - 1) {
+        if (selectedIndexRef.current < totalImagesRef.current - 1) {
           const fakeEvent = { stopPropagation: () => {} } as React.MouseEvent
           onNextRef.current(fakeEvent)
         }
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
-        if (currentDisplayIndexRef.current > 0) {
+        if (selectedIndexRef.current > 0) {
           const fakeEvent = { stopPropagation: () => {} } as React.MouseEvent
           onPrevRef.current(fakeEvent)
         }
@@ -93,14 +90,14 @@ export function ModelImageModal({
             <button 
               className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-opacity disabled:opacity-30"
               onClick={onPrev}
-              disabled={currentDisplayIndex <= 0}
+              disabled={selectedImageIndex <= 0}
             >
               <ChevronLeft className="h-8 w-8 text-white" />
             </button>
             <button 
               className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition-opacity disabled:opacity-30"
               onClick={onNext}
-              disabled={currentDisplayIndex >= displayImages.length - 1}
+              disabled={selectedImageIndex >= displayImages.length - 1}
             >
               <ChevronRight className="h-8 w-8 text-white" />
             </button>
@@ -116,10 +113,10 @@ export function ModelImageModal({
         </button>
 
         {/* Indicateur de position */}
-        {displayImages.length > 1 && currentDisplayIndex >= 0 && (
+        {displayImages.length > 1 && (
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 rounded-full px-3 py-1">
             <span className="text-white text-sm">
-              {currentDisplayIndex + 1} / {displayImages.length}
+              {selectedImageIndex + 1} / {displayImages.length}
             </span>
           </div>
         )}
