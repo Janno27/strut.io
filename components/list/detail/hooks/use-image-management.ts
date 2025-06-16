@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
-import { ModelDetailProps, FocalPoint } from "../types"
+import { ModelDetailProps, FocalPoint, ImageGroups } from "../types"
+import { useImageGroups } from "./use-image-groups"
 
 interface UseImageManagementProps {
   model: ModelDetailProps['model']
@@ -10,7 +11,7 @@ interface UseImageManagementProps {
 }
 
 export function useImageManagement({ model, isEditing, onModelUpdated }: UseImageManagementProps) {
-  // États pour les images
+  // États pour les images (ancien système)
   const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([])
   const [tempMainImage, setTempMainImage] = useState<string | null>(null)
@@ -25,14 +26,24 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
   // État pour le repositionnement d'image
   const [isPositionEditorOpen, setIsPositionEditorOpen] = useState(false)
   const [positionImageUrl, setPositionImageUrl] = useState("")
-  const [positionImageType, setPositionImageType] = useState<"main" | "additional">("main")
+  const [positionImageType, setPositionImageType] = useState<"main" | "additional" | "group">("main")
   const [positionImageIndex, setPositionImageIndex] = useState<number>(-1)
+  const [positionGroupId, setPositionGroupId] = useState<string>("")
   
   // États pour les focal points
   const [mainImageFocalPoint, setMainImageFocalPoint] = useState<FocalPoint | undefined>(model.main_image_focal_point)
   const [additionalImagesFocalPoints, setAdditionalImagesFocalPoints] = useState<Record<string, FocalPoint>>(
     model.additional_images_focal_points || {}
   )
+
+  // Hook pour gérer les groupes d'images (nouveau système)
+  const imageGroupsHook = useImageGroups({
+    modelId: model.id,
+    additionalImages: model.additionalImages,
+    imageGroups: model.image_groups,
+    additionalImagesFocalPoints: additionalImagesFocalPoints,
+    isEditing
+  })
   
   const supabase = createClient()
   
@@ -251,12 +262,19 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
         ...prev,
         [imageUrl]: focalPoint
       }))
+    } else if (positionImageType === "group") {
+      // Gestion du repositionnement pour les groupes
+      setAdditionalImagesFocalPoints(prev => ({
+        ...prev,
+        [positionImageUrl]: focalPoint
+      }))
     }
     
     setIsPositionEditorOpen(false)
     setPositionImageUrl("")
     setPositionImageType("main")
     setPositionImageIndex(-1)
+    setPositionGroupId("")
   }
 
   // Gestion de la modal d'image
@@ -377,8 +395,20 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
     cleanupBlobUrls(urlsToClean);
   }
 
+  // Gestionnaires pour les groupes d'images
+  const handleGroupImageReposition = (groupId: string, imageIndex: number) => {
+    const repositionData = imageGroupsHook.handleImageReposition(groupId, imageIndex)
+    if (repositionData.imageUrl) {
+      setPositionImageUrl(repositionData.imageUrl)
+      setPositionImageType("group")
+      setPositionImageIndex(imageIndex)
+      setPositionGroupId(groupId)
+      setIsPositionEditorOpen(true)
+    }
+  }
+
   return {
-    // États des images
+    // États des images (ancien système)
     mainImageFile,
     additionalImageFiles,
     tempMainImage,
@@ -395,6 +425,7 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
     positionImageUrl,
     positionImageType,
     positionImageIndex,
+    positionGroupId,
     
     // États des focal points
     mainImageFocalPoint,
@@ -411,7 +442,7 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
     handleMainImageRemove,
     handleMainImageReposition,
     
-    // Actions images supplémentaires
+    // Actions images supplémentaires (ancien système)
     handleAdditionalImageAdd,
     handleAdditionalImageRemoveByIndex,
     handleAdditionalImagesReorder,
@@ -426,5 +457,15 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
     handleCloseImageModal,
     handleNextImage,
     handlePrevImage,
+    
+    // Actions pour les groupes d'images (nouveau système)
+    imageGroups: imageGroupsHook.imageGroups,
+    setImageGroups: imageGroupsHook.setImageGroups,
+    handleGroupImageAdd: imageGroupsHook.handleImageAdd,
+    handleGroupImageRemove: imageGroupsHook.handleImageRemove,
+    handleGroupImageReposition,
+    uploadGroupImages: imageGroupsHook.uploadNewImages,
+    getGroupsForSave: imageGroupsHook.getGroupsForSave,
+    resetImageGroups: imageGroupsHook.resetImageGroups,
   }
 } 

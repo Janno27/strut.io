@@ -35,6 +35,7 @@ interface Model {
   created_at: string
   main_image_focal_point?: { x: number; y: number }
   additional_images_focal_points?: Record<string, { x: number; y: number }>
+  image_groups?: any // Ajouter les groupes d'images
 }
 
 // Type pour les modèles utilisés dans la grille
@@ -60,6 +61,7 @@ interface GridModel {
   agent_id?: string
   main_image_focal_point?: { x: number; y: number }
   additional_images_focal_points?: Record<string, { x: number; y: number }>
+  image_groups?: any // Ajouter les groupes d'images
 }
 
 interface ModelListProps {
@@ -247,7 +249,8 @@ export function ModelList({ searchQuery = "" }: ModelListProps) {
       last_name: model.last_name,
       agent_id: model.agent_id,
       main_image_focal_point: model.main_image_focal_point,
-      additional_images_focal_points: model.additional_images_focal_points
+      additional_images_focal_points: model.additional_images_focal_points,
+      image_groups: model.image_groups // Inclure les groupes d'images
     }));
   };
   

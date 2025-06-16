@@ -35,11 +35,15 @@ export function ModelDetail({
     formData,
     firstName,
     lastName,
+    customEyeColor,
+    customHairColor,
     setIsEditing,
     setIsLoading,
     handleEditClick,
     handleChange,
     handleSelectChange,
+    handleCustomEyeColorChange,
+    handleCustomHairColorChange,
     handleDeleteClick,
     handleCancelDelete,
     handleConfirmDelete,
@@ -74,6 +78,14 @@ export function ModelDetail({
     handleCloseImageModal,
     handleNextImage,
     handlePrevImage,
+    // Nouvelles propriétés pour les groupes d'images
+    imageGroups,
+    setImageGroups,
+    handleGroupImageAdd,
+    handleGroupImageRemove,
+    handleGroupImageReposition,
+    uploadGroupImages,
+    getGroupsForSave,
   } = useImageManagement({ model, isEditing, onModelUpdated })
 
   // Hook pour la sauvegarde
@@ -104,7 +116,12 @@ export function ModelDetail({
       uploadNewImages, 
       saveImagesAndCleanup,
       mainImageFocalPoint,
-      additionalImagesFocalPoints
+      additionalImagesFocalPoints,
+      customEyeColor,
+      customHairColor,
+      // Nouvelles fonctions pour les groupes
+      uploadGroupImages,
+      getGroupsForSave
     )
     if (success) {
       setIsEditing(false)
@@ -158,6 +175,10 @@ export function ModelDetail({
                 isLoading={isLoading}
                 onChange={handleChange}
                 onSelectChange={handleSelectChange}
+                customEyeColor={customEyeColor}
+                customHairColor={customHairColor}
+                onCustomEyeColorChange={handleCustomEyeColorChange}
+                onCustomHairColorChange={handleCustomHairColorChange}
                 showImageManagement={false}
               />
             ) : (
@@ -174,7 +195,11 @@ export function ModelDetail({
       {/* Images additionnelles */}
       <div className="space-y-2">
         <ModelAdditionalImages
-          model={{ ...model, additional_images_focal_points: additionalImagesFocalPoints }}
+          model={{ 
+            ...model, 
+            additional_images_focal_points: additionalImagesFocalPoints,
+            image_groups: imageGroups
+          }}
           isEditing={isEditing}
           imagesToDelete={imagesToDelete}
           getAllAdditionalImages={getAllAdditionalImages}
@@ -183,6 +208,10 @@ export function ModelDetail({
           onImageAdd={handleAdditionalImageAdd}
           onImageRemove={handleAdditionalImageRemoveByIndex}
           onImageReposition={handleAdditionalImageReposition}
+          onImageGroupsChange={setImageGroups}
+          onGroupImageAdd={handleGroupImageAdd}
+          onGroupImageRemove={handleGroupImageRemove}
+          onGroupImageReposition={handleGroupImageReposition}
         />
       </div>
       

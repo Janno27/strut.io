@@ -396,6 +396,7 @@ export function PackageTable({ projectId }: PackageTableProps) {
           onEditPackage={handleEditPackage}
           onSharePackage={handleSharePackage}
           onDuplicatePackage={handleDuplicatePackage}
+          onUpdate={loadData}
         />
       )}
       

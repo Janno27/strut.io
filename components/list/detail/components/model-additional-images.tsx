@@ -1,13 +1,14 @@
 import Image from "next/image"
 import { Label } from "@/components/ui/label"
-import { DraggableImageGrid } from "@/components/ui/draggable-image-grid"
-import { FocalPoint } from "../types"
+import { ImageGroupsManager } from "./image-groups-manager"
+import { FocalPoint, ImageGroups } from "../types"
 
 interface ModelAdditionalImagesProps {
   model: {
     name: string
     additionalImages?: string[]
     additional_images_focal_points?: Record<string, FocalPoint>
+    image_groups?: ImageGroups
   }
   isEditing: boolean
   imagesToDelete: string[]
@@ -17,6 +18,11 @@ interface ModelAdditionalImagesProps {
   onImageAdd: (e: React.ChangeEvent<HTMLInputElement>) => void
   onImageRemove: (index: number) => void
   onImageReposition: (index: number) => void
+  // Nouvelles props pour les groupes
+  onImageGroupsChange?: (newGroups: ImageGroups) => void
+  onGroupImageAdd?: (groupId: string, e: React.ChangeEvent<HTMLInputElement>) => void
+  onGroupImageRemove?: (groupId: string, imageIndex: number) => void
+  onGroupImageReposition?: (groupId: string, imageIndex: number) => void
 }
 
 export function ModelAdditionalImages({
@@ -28,8 +34,32 @@ export function ModelAdditionalImages({
   onImagesReorder,
   onImageAdd,
   onImageRemove,
-  onImageReposition
+  onImageReposition,
+  onImageGroupsChange,
+  onGroupImageAdd,
+  onGroupImageRemove,
+  onGroupImageReposition
 }: ModelAdditionalImagesProps) {
+  // Si on utilise le nouveau système de groupes
+  if (model.image_groups && onImageGroupsChange && onGroupImageAdd && onGroupImageRemove && onGroupImageReposition) {
+    return (
+      <div className="space-y-2">
+        {isEditing && <Label>Photos supplémentaires</Label>}
+        <ImageGroupsManager
+          imageGroups={model.image_groups}
+          focalPoints={model.additional_images_focal_points || {}}
+          isEditing={isEditing}
+          onImageGroupsChange={onImageGroupsChange}
+          onImageAdd={onGroupImageAdd}
+          onImageRemove={onGroupImageRemove}
+          onImageReposition={onGroupImageReposition}
+          onImageClick={onImageClick}
+        />
+      </div>
+    )
+  }
+
+  // Ancien système (rétrocompatibilité)
   if (!isEditing) {
     // Mode affichage
     const displayAdditionalImages = (model.additionalImages || []).filter(img => !imagesToDelete.includes(img))
@@ -63,20 +93,13 @@ export function ModelAdditionalImages({
     )
   }
 
-  // Mode édition avec drag & drop
+  // Mode édition avec l'ancien système - pas de drag & drop pour le moment
   return (
-    <>
+    <div className="space-y-2">
       <Label>Photos supplémentaires</Label>
-      <DraggableImageGrid
-        images={getAllAdditionalImages()}
-        onImagesChange={onImagesReorder}
-        onImageAdd={onImageAdd}
-        onImageRemove={onImageRemove}
-        onImageReposition={onImageReposition}
-        allowMultiple={true}
-        maxImages={10}
-        focalPoints={model.additional_images_focal_points || {}}
-      />
-    </>
+      <p className="text-sm text-gray-500">
+        Mode édition de l'ancien système. Utilisez le nouveau système de groupes pour plus de fonctionnalités.
+      </p>
+    </div>
   )
 } 

@@ -32,6 +32,8 @@ interface Model {
   agent_id: string
   created_at: string
   is_shortlisted?: boolean
+  image_groups?: any
+  shared_image_groups?: string[]
 }
 
 // Type pour le retour de l'API Supabase
@@ -52,6 +54,7 @@ interface ClientData {
 interface PackageModelData {
   model_id: string
   is_shortlisted?: boolean
+  shared_image_groups?: string[]
 }
 
 // Type pour les modèles utilisés dans la grille
@@ -73,6 +76,8 @@ interface GridModel {
   eye_color?: string
   hair_color?: string
   is_shortlisted?: boolean
+  image_groups?: any
+  shared_image_groups?: string[]
 }
 
 // Composant qui utilise useSearchParams
@@ -243,10 +248,10 @@ function SharedPageContent() {
             setPackageName(typedPackageData.name)
             setProjectName(typedProjectData.name)
             
-            // Récupérer les mannequins du package avec les informations de shortlist
+            // Récupérer les mannequins du package avec les informations de shortlist et groupes partagés
             const { data: packageModels, error: packageModelsError } = await supabase
               .from("package_models")
-              .select("model_id, is_shortlisted")
+              .select("model_id, is_shortlisted, shared_image_groups")
               .eq("package_id", packageId)
               
             if (packageModelsError) {
@@ -266,10 +271,10 @@ function SharedPageContent() {
             const typedPackageModels = packageModels as unknown as PackageModelData[]
             const modelIds = typedPackageModels.map(item => item.model_id)
             
-            // Récupérer les détails des modèles
+            // Récupérer les détails des modèles avec les groupes d'images
             const { data: modelsData, error: modelsError } = await supabase
               .from("models")
-              .select("*")
+              .select("*, image_groups")
               .in("id", modelIds)
               
             if (modelsError) {
@@ -289,16 +294,19 @@ function SharedPageContent() {
             // Typer correctement les données des modèles
             const typedModelsData = modelsData as unknown as Model[]
             
-            // Créer un map pour les informations de shortlist
+            // Créer des maps pour les informations de shortlist et groupes partagés
             const shortlistMap = new Map<string, boolean>()
+            const sharedGroupsMap = new Map<string, string[]>()
             typedPackageModels.forEach(pm => {
               shortlistMap.set(pm.model_id, pm.is_shortlisted || false)
+              sharedGroupsMap.set(pm.model_id, pm.shared_image_groups || [])
             })
             
-            // Ajouter les informations de shortlist aux modèles
+            // Ajouter les informations de shortlist et groupes partagés aux modèles
             const modelsWithShortlist = typedModelsData.map(model => ({
               ...model,
-              is_shortlisted: shortlistMap.get(model.id) || false
+              is_shortlisted: shortlistMap.get(model.id) || false,
+              shared_image_groups: sharedGroupsMap.get(model.id) || []
             }))
             
             // Séparer les modèles par genre
@@ -411,25 +419,41 @@ function SharedPageContent() {
 
   // Transformer les modèles pour correspondre au format attendu par ModelGrid
   const formatModelsForGrid = (models: Model[]): GridModel[] => {
-    return models.map(model => ({
-      id: model.id,
-      name: `${model.first_name} ${model.last_name}`,
-      age: model.age || 0,
-      height: model.height,
-      bust: model.bust,
-      waist: model.waist,
-      hips: model.hips,
-      imageUrl: model.main_image,
-      additionalImages: model.additional_images,
-      instagram: model.instagram,
-      description: model.description || "",
-      experience: [],
-      models_com_link: model.models_com_link,
-      shoe_size: model.shoe_size,
-      eye_color: model.eye_color,
-      hair_color: model.hair_color,
-      is_shortlisted: model.is_shortlisted || false
-    }))
+    return models.map(model => {
+      // Filtrer les groupes d'images selon les groupes partagés
+      let filteredImageGroups = model.image_groups
+      if (packageId && model.shared_image_groups && model.shared_image_groups.length > 0) {
+        // Si des groupes spécifiques sont partagés, ne garder que ceux-là
+        filteredImageGroups = {}
+        model.shared_image_groups.forEach(groupId => {
+          if (model.image_groups && model.image_groups[groupId]) {
+            filteredImageGroups[groupId] = model.image_groups[groupId]
+          }
+        })
+      }
+
+      return {
+        id: model.id,
+        name: `${model.first_name} ${model.last_name}`,
+        age: model.age || 0,
+        height: model.height,
+        bust: model.bust,
+        waist: model.waist,
+        hips: model.hips,
+        imageUrl: model.main_image,
+        additionalImages: model.additional_images,
+        instagram: model.instagram,
+        description: model.description || "",
+        experience: [],
+        models_com_link: model.models_com_link,
+        shoe_size: model.shoe_size,
+        eye_color: model.eye_color,
+        hair_color: model.hair_color,
+        is_shortlisted: model.is_shortlisted || false,
+        image_groups: filteredImageGroups,
+        shared_image_groups: model.shared_image_groups
+      }
+    })
   }
   
   // Si aucun agent n'est spécifié, afficher un message d'erreur

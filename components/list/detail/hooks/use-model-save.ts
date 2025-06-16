@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
-import { ModelFormData, FocalPoint } from "../types"
+import { ModelFormData, FocalPoint, ImageGroups } from "../types"
 
 interface UseModelSaveProps {
   modelId: string
@@ -16,7 +16,12 @@ export function useModelSave({ modelId, onModelUpdated, setIsLoading }: UseModel
     uploadNewImages: () => Promise<{ newMainImageUrl: string; newAdditionalImageUrls: string[] }>,
     saveImagesAndCleanup: () => void,
     mainImageFocalPoint?: FocalPoint,
-    additionalImagesFocalPoints?: Record<string, FocalPoint>
+    additionalImagesFocalPoints?: Record<string, FocalPoint>,
+    customEyeColor?: string,
+    customHairColor?: string,
+    // Nouveaux paramètres pour les groupes
+    uploadGroupImages?: () => Promise<Record<string, string[]>>,
+    getGroupsForSave?: (uploadedUrls: Record<string, string[]>) => ImageGroups
   ) => {
     try {
       // Validation de l'ID du modèle
@@ -26,10 +31,15 @@ export function useModelSave({ modelId, onModelUpdated, setIsLoading }: UseModel
 
       setIsLoading(true)
       
-      // Télécharger les nouvelles images
+      // Télécharger les nouvelles images (ancien système)
       const { newMainImageUrl, newAdditionalImageUrls } = await uploadNewImages();
       
-      const updateData = {
+      // Déterminer les couleurs finales
+      const finalEyeColor = formData.eyeColor === "autre" ? customEyeColor : formData.eyeColor
+      const finalHairColor = formData.hairColor === "autre" ? customHairColor : formData.hairColor
+      
+      // Préparer les données de base
+      const updateData: any = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         age: parseInt(formData.age) || null,
@@ -38,16 +48,44 @@ export function useModelSave({ modelId, onModelUpdated, setIsLoading }: UseModel
         waist: parseInt(formData.waist) || null,
         hips: parseInt(formData.hips) || null,
         shoe_size: parseFloat(formData.shoeSize) || null,
-        eye_color: formData.eyeColor || null,
-        hair_color: formData.hairColor || null,
+        eye_color: finalEyeColor || null,
+        hair_color: finalHairColor || null,
         instagram: formData.instagram || null,
         models_com_link: formData.modelsComLink || null,
         description: formData.description || null,
         main_image: newMainImageUrl,
-        additional_images: newAdditionalImageUrls,
         main_image_focal_point: mainImageFocalPoint || null,
         additional_images_focal_points: additionalImagesFocalPoints || null
       }
+
+      // Gérer les groupes d'images si les fonctions sont disponibles
+      if (uploadGroupImages && getGroupsForSave) {
+        console.log("💾 Using new image groups system")
+        // Nouveau système avec groupes
+        const uploadedGroupUrls = await uploadGroupImages()
+        console.log("💾 Uploaded group URLs:", uploadedGroupUrls)
+        const finalImageGroups = getGroupsForSave(uploadedGroupUrls)
+        console.log("💾 Final image groups:", finalImageGroups)
+        updateData.image_groups = finalImageGroups
+        
+        // Pour la rétrocompatibilité, extraire toutes les images dans additional_images
+        const allAdditionalImages: string[] = []
+        Object.values(finalImageGroups).forEach(group => {
+          if (Array.isArray(group)) {
+            allAdditionalImages.push(...group)
+          } else if (group && typeof group === 'object' && 'images' in group) {
+            allAdditionalImages.push(...group.images)
+          }
+        })
+        updateData.additional_images = allAdditionalImages
+        console.log("💾 All additional images for retrocompatibility:", allAdditionalImages)
+      } else {
+        console.log("💾 Using old image system")
+        // Ancien système sans groupes
+        updateData.additional_images = newAdditionalImageUrls
+      }
+      
+      console.log("💾 Final updateData:", updateData)
       
       const { error } = await supabase
         .from('models')

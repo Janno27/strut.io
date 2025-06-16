@@ -45,29 +45,56 @@ CREATE POLICY "Les utilisateurs authentifiés peuvent supprimer leurs images"
   USING (bucket_id = 'models' AND owner = auth.uid());
 
   -- models
-  create table public.models (
+create table public.models (
   id uuid not null default extensions.uuid_generate_v4 (),
   first_name text not null,
   last_name text not null,
   gender text not null,
-  height integer not null,
-  bust integer not null,
-  waist integer not null,
-  hips integer not null,
-  shoe_size numeric(4, 1) not null,
-  eye_color text not null,
-  hair_color text not null,
+  height integer null,
+  bust integer null,
+  waist integer null,
+  hips integer null,
+  shoe_size numeric(4, 1) null,
+  eye_color text null,
+  hair_color text null,
   instagram text null,
   models_com_link text null,
-  main_image text not null,
+  main_image text null,
   additional_images text[] null,
   agent_id uuid not null,
   created_at timestamp with time zone null default now(),
   updated_at timestamp with time zone null default now(),
   age numeric null,
   description text null,
+  main_image_focal_point jsonb null,
+  additional_images_focal_points jsonb null,
   constraint models_pkey primary key (id),
   constraint models_agent_id_fkey foreign KEY (agent_id) references auth.users (id),
+  constraint check_main_image_focal_point check (
+    (
+      (main_image_focal_point is null)
+      or (
+        (main_image_focal_point ? 'x'::text)
+        and (main_image_focal_point ? 'y'::text)
+        and (
+          (
+            ((main_image_focal_point ->> 'x'::text))::numeric >= (0)::numeric
+          )
+          and (
+            ((main_image_focal_point ->> 'x'::text))::numeric <= (100)::numeric
+          )
+        )
+        and (
+          (
+            ((main_image_focal_point ->> 'y'::text))::numeric >= (0)::numeric
+          )
+          and (
+            ((main_image_focal_point ->> 'y'::text))::numeric <= (100)::numeric
+          )
+        )
+      )
+    )
+  ),
   constraint models_gender_check check (
     (
       gender = any (array['male'::text, 'female'::text])

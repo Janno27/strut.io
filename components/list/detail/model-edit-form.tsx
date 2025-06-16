@@ -2,6 +2,7 @@
 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DraggableImageGrid } from "@/components/ui/draggable-image-grid"
 import { MainImageUploader } from "@/components/ui/main-image-uploader"
 import { ModelEditFormProps } from "./types"
@@ -11,6 +12,11 @@ export function ModelEditForm({
   isLoading,
   onChange,
   onSelectChange,
+  // Gestion des couleurs personnalisées
+  customEyeColor,
+  customHairColor,
+  onCustomEyeColorChange,
+  onCustomHairColorChange,
   // Gestion des images
   mainImage = null,
   additionalImages = [],
@@ -203,23 +209,65 @@ export function ModelEditForm({
         </div>
         <div>
           <Label htmlFor="eyeColor">Couleur des yeux</Label>
-          <Input
-            id="eyeColor"
-            name="eyeColor"
+          <Select
             value={formData.eyeColor}
-            onChange={onChange}
+            onValueChange={(value) => onSelectChange(value, "eyeColor")}
             disabled={isLoading}
-          />
+          >
+            <SelectTrigger id="eyeColor" className="w-full">
+              <SelectValue placeholder="Sélectionnez une couleur" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bleu">Bleu</SelectItem>
+              <SelectItem value="vert">Vert</SelectItem>
+              <SelectItem value="marron">Marron</SelectItem>
+              <SelectItem value="noisette">Noisette</SelectItem>
+              <SelectItem value="noir">Noir</SelectItem>
+              <SelectItem value="gris">Gris</SelectItem>
+              <SelectItem value="autre">Autre</SelectItem>
+            </SelectContent>
+          </Select>
+          {formData.eyeColor === "autre" && onCustomEyeColorChange && (
+            <div className="mt-2">
+              <Input
+                placeholder="Précisez la couleur des yeux"
+                value={customEyeColor || ""}
+                onChange={(e) => onCustomEyeColorChange(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
+          )}
         </div>
         <div>
           <Label htmlFor="hairColor">Couleur des cheveux</Label>
-          <Input
-            id="hairColor"
-            name="hairColor"
+          <Select
             value={formData.hairColor}
-            onChange={onChange}
+            onValueChange={(value) => onSelectChange(value, "hairColor")}
             disabled={isLoading}
-          />
+          >
+            <SelectTrigger id="hairColor" className="w-full">
+              <SelectValue placeholder="Sélectionnez une couleur" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="blond">Blond</SelectItem>
+              <SelectItem value="brun">Brun</SelectItem>
+              <SelectItem value="châtain">Châtain</SelectItem>
+              <SelectItem value="roux">Roux</SelectItem>
+              <SelectItem value="noir">Noir</SelectItem>
+              <SelectItem value="gris">Gris/Blanc</SelectItem>
+              <SelectItem value="autre">Autre</SelectItem>
+            </SelectContent>
+          </Select>
+          {formData.hairColor === "autre" && onCustomHairColorChange && (
+            <div className="mt-2">
+              <Input
+                placeholder="Précisez la couleur des cheveux"
+                value={customHairColor || ""}
+                onChange={(e) => onCustomHairColorChange(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
+          )}
           </div>
         </div>
       </div>

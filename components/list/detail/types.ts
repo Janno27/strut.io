@@ -3,6 +3,16 @@ export interface FocalPoint {
   y: number  // Pourcentage 0-100
 }
 
+// Types pour les groupes d'images
+export interface ImageGroup {
+  name: string
+  images: string[]
+}
+
+export interface ImageGroups {
+  [groupId: string]: string[] | ImageGroup // "ungrouped" est un tableau simple, les autres sont des objets
+}
+
 export interface Model {
   id: string
   name: string
@@ -26,6 +36,8 @@ export interface Model {
   // Focal points pour repositionner les images dans leurs previews
   main_image_focal_point?: FocalPoint
   additional_images_focal_points?: Record<string, FocalPoint>
+  // Nouveau système de groupes d'images
+  image_groups?: ImageGroups
 }
 
 export interface ModelFormData {
@@ -86,6 +98,11 @@ export interface ModelEditFormProps {
   isLoading: boolean
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
   onSelectChange: (value: string, name: string) => void
+  // Gestion des couleurs personnalisées
+  customEyeColor?: string
+  customHairColor?: string
+  onCustomEyeColorChange?: (value: string) => void
+  onCustomHairColorChange?: (value: string) => void
   // Gestion des images
   mainImage?: string | null
   additionalImages?: string[]

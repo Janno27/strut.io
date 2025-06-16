@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
+import { ImageGroupsSelector } from './image-groups-selector';
 
 interface Model {
   id: string;
@@ -23,6 +24,7 @@ interface Model {
   bust: number;
   waist: number;
   hips: number;
+  shared_image_groups?: string[];
 }
 
 interface Package {
@@ -38,9 +40,10 @@ interface PackageListProps {
   onEditPackage?: (packageId: string) => void;
   onSharePackage?: (packageId: string) => void;
   onDuplicatePackage?: (packageId: string) => void;
+  onUpdate?: () => void;
 }
 
-export function PackageList({ packages, onDeletePackage, onEditPackage, onSharePackage, onDuplicatePackage }: PackageListProps) {
+export function PackageList({ packages, onDeletePackage, onEditPackage, onSharePackage, onDuplicatePackage, onUpdate }: PackageListProps) {
   const [packageModels, setPackageModels] = useState<{ [key: string]: Model[] }>({});
   const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
   const supabase = createClient();
@@ -52,7 +55,7 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
 
       try {
         const { data, error } = await supabase
-          .rpc('get_package_models', { package_uuid: packageId });
+          .rpc('get_package_models_with_groups', { package_uuid: packageId });
 
         if (error) throw error;
 
@@ -166,12 +169,13 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
                   <TableHead>Nom</TableHead>
                   <TableHead>Genre</TableHead>
                   <TableHead>Mensurations</TableHead>
+                  <TableHead className="w-12">Groupes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading[pkg.package_id] ? (
                   <TableRow key={`loading-${pkg.package_id}`}>
-                    <TableCell colSpan={3} className="text-center">
+                    <TableCell colSpan={4} className="text-center">
                       Chargement des mannequins...
                     </TableCell>
                   </TableRow>
@@ -187,11 +191,20 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
                       <TableCell>
                         {model.height}cm, {model.bust}-{model.waist}-{model.hips}
                       </TableCell>
+                      <TableCell>
+                        <ImageGroupsSelector
+                          packageId={pkg.package_id}
+                          modelId={model.id}
+                          modelName={`${model.first_name} ${model.last_name}`}
+                          currentSharedGroups={model.shared_image_groups}
+                          onUpdate={onUpdate}
+                        />
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow key={`empty-${pkg.package_id}`}>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">
                       Aucun mannequin sélectionné pour ce package.
                     </TableCell>
                   </TableRow>

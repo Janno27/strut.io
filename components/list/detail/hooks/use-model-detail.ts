@@ -16,6 +16,10 @@ export function useModelDetail({ model, onModelUpdated, onModelDeleted, onClose 
   const [isDeleting, setIsDeleting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   
+  // États pour les valeurs personnalisées
+  const [customEyeColor, setCustomEyeColor] = useState("")
+  const [customHairColor, setCustomHairColor] = useState("")
+  
   // Données du formulaire
   const [formData, setFormData] = useState<ModelFormData>({
     firstName: "",
@@ -41,6 +45,13 @@ export function useModelDetail({ model, onModelUpdated, onModelDeleted, onClose 
   // Initialisation du formulaire
   useEffect(() => {
     if (model) {
+      // Déterminer si les couleurs sont des valeurs personnalisées
+      const eyeColorOptions = ["bleu", "vert", "marron", "noisette", "noir", "gris"]
+      const hairColorOptions = ["blond", "brun", "châtain", "roux", "noir", "gris"]
+      
+      const isCustomEyeColor = model.eye_color && !eyeColorOptions.includes(model.eye_color)
+      const isCustomHairColor = model.hair_color && !hairColorOptions.includes(model.hair_color)
+      
       setFormData({
         firstName: model.first_name || firstName,
         lastName: model.last_name || lastName,
@@ -50,12 +61,16 @@ export function useModelDetail({ model, onModelUpdated, onModelDeleted, onClose 
         waist: model.waist?.toString() || "",
         hips: model.hips?.toString() || "",
         shoeSize: model.shoe_size?.toString() || "",
-        eyeColor: model.eye_color || "",
-        hairColor: model.hair_color || "",
+        eyeColor: isCustomEyeColor ? "autre" : (model.eye_color || ""),
+        hairColor: isCustomHairColor ? "autre" : (model.hair_color || ""),
         instagram: model.instagram || "",
         modelsComLink: model.models_com_link || "",
         description: model.description || ""
       })
+      
+      // Initialiser les valeurs personnalisées
+      setCustomEyeColor(isCustomEyeColor ? model.eye_color || "" : "")
+      setCustomHairColor(isCustomHairColor ? model.hair_color || "" : "")
     }
   }, [model, firstName, lastName])
 
@@ -67,6 +82,22 @@ export function useModelDetail({ model, onModelUpdated, onModelDeleted, onClose 
   
   const handleSelectChange = (value: string, name: string) => {
     setFormData(prev => ({ ...prev, [name]: value }))
+    
+    // Réinitialiser les valeurs personnalisées si on ne sélectionne plus "autre"
+    if (name === "eyeColor" && value !== "autre") {
+      setCustomEyeColor("")
+    }
+    if (name === "hairColor" && value !== "autre") {
+      setCustomHairColor("")
+    }
+  }
+  
+  const handleCustomEyeColorChange = (value: string) => {
+    setCustomEyeColor(value)
+  }
+  
+  const handleCustomHairColorChange = (value: string) => {
+    setCustomHairColor(value)
   }
 
   // Gestion de l'édition
@@ -75,6 +106,13 @@ export function useModelDetail({ model, onModelUpdated, onModelDeleted, onClose 
   }
   
   const resetFormData = () => {
+    // Déterminer si les couleurs sont des valeurs personnalisées
+    const eyeColorOptions = ["bleu", "vert", "marron", "noisette", "noir", "gris"]
+    const hairColorOptions = ["blond", "brun", "châtain", "roux", "noir", "gris"]
+    
+    const isCustomEyeColor = model.eye_color && !eyeColorOptions.includes(model.eye_color)
+    const isCustomHairColor = model.hair_color && !hairColorOptions.includes(model.hair_color)
+    
     setFormData({
       firstName: model.first_name || firstName,
       lastName: model.last_name || lastName,
@@ -84,12 +122,16 @@ export function useModelDetail({ model, onModelUpdated, onModelDeleted, onClose 
       waist: model.waist?.toString() || "",
       hips: model.hips?.toString() || "",
       shoeSize: model.shoe_size?.toString() || "",
-      eyeColor: model.eye_color || "",
-      hairColor: model.hair_color || "",
+      eyeColor: isCustomEyeColor ? "autre" : (model.eye_color || ""),
+      hairColor: isCustomHairColor ? "autre" : (model.hair_color || ""),
       instagram: model.instagram || "",
       modelsComLink: model.models_com_link || "",
       description: model.description || ""
     })
+    
+    // Réinitialiser les valeurs personnalisées
+    setCustomEyeColor(isCustomEyeColor ? model.eye_color || "" : "")
+    setCustomHairColor(isCustomHairColor ? model.hair_color || "" : "")
   }
 
   // Gestion de la suppression
@@ -177,6 +219,8 @@ export function useModelDetail({ model, onModelUpdated, onModelDeleted, onClose 
     formData,
     firstName,
     lastName,
+    customEyeColor,
+    customHairColor,
     
     // Setters
     setIsEditing,
@@ -186,6 +230,8 @@ export function useModelDetail({ model, onModelUpdated, onModelDeleted, onClose 
     handleEditClick,
     handleChange,
     handleSelectChange,
+    handleCustomEyeColorChange,
+    handleCustomHairColorChange,
     handleDeleteClick,
     handleCancelDelete,
     handleConfirmDelete,
