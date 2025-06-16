@@ -307,18 +307,34 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
   const handleNextImage = (e: React.MouseEvent) => {
     e.stopPropagation()
     const allImages = getAllAdditionalImages()
-    if (selectedImageIndex < allImages.length - 1) {
-      setSelectedImageIndex(selectedImageIndex + 1)
-      setSelectedImage(allImages[selectedImageIndex + 1])
+    const displayImages = allImages.filter(img => !imagesToDelete.includes(img))
+    
+    // Trouver l'index actuel dans les images affichées
+    const currentDisplayIndex = displayImages.findIndex(img => img === selectedImage)
+    
+    if (currentDisplayIndex >= 0 && currentDisplayIndex < displayImages.length - 1) {
+      const nextImage = displayImages[currentDisplayIndex + 1]
+      const nextIndex = allImages.findIndex(img => img === nextImage)
+      
+      setSelectedImageIndex(nextIndex)
+      setSelectedImage(nextImage)
     }
   }
   
   const handlePrevImage = (e: React.MouseEvent) => {
     e.stopPropagation()
     const allImages = getAllAdditionalImages()
-    if (selectedImageIndex > 0) {
-      setSelectedImageIndex(selectedImageIndex - 1)
-      setSelectedImage(allImages[selectedImageIndex - 1])
+    const displayImages = allImages.filter(img => !imagesToDelete.includes(img))
+    
+    // Trouver l'index actuel dans les images affichées
+    const currentDisplayIndex = displayImages.findIndex(img => img === selectedImage)
+    
+    if (currentDisplayIndex > 0) {
+      const prevImage = displayImages[currentDisplayIndex - 1]
+      const prevIndex = allImages.findIndex(img => img === prevImage)
+      
+      setSelectedImageIndex(prevIndex)
+      setSelectedImage(prevImage)
     }
   }
 
