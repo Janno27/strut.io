@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { AddModelFormData, ModelImageUploadResult, FocalPoint } from "../types"
+import { ImageGroups } from "../../detail/types"
 import { generateDefaultImage, generateFileName } from "../utils/model-utils"
 
 interface UseModelSubmissionProps {
@@ -101,7 +102,10 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
     additionalImageFiles: File[],
     mainImageFocalPoint?: FocalPoint,
     additionalImagesFocalPoints?: Record<string, FocalPoint>,
-    additionalImages?: string[] // Ajouter l'ordre des images
+    additionalImages?: string[], // Ajouter l'ordre des images (ancien système)
+    // Nouveaux paramètres pour les groupes
+    uploadGroupImages?: () => Promise<Record<string, string[]>>,
+    getGroupsForSave?: (uploadedUrls: Record<string, string[]>) => ImageGroups
   ): Promise<boolean> => {
     try {
       if (!agentId) {
@@ -115,25 +119,8 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
         formData
       );
 
-      
-      // Mapper les focal points des images supplémentaires avec les nouvelles URLs
-      let mappedAdditionalImagesFocalPoints: Record<string, FocalPoint> | null = null;
-      if (additionalImagesFocalPoints && additionalImages && Object.keys(additionalImagesFocalPoints).length > 0) {
-        mappedAdditionalImagesFocalPoints = {};
-        
-        // Mapper les focal points en utilisant l'ordre des images dans additionalImages
-        additionalImages.forEach((tempUrl, index) => {
-          const newUrl = additionalImageUrls[index];
-          const focalPoint = additionalImagesFocalPoints[tempUrl];
-          
-          if (focalPoint && newUrl) {
-            mappedAdditionalImagesFocalPoints![newUrl] = focalPoint;
-          }
-        });
-      }
-      
-      // Préparer les données du modèle
-      const modelData = {
+      // Préparer les données de base du modèle
+      const modelData: any = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         gender: formData.gender,
@@ -149,11 +136,49 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
         models_com_link: formData.modelsComLink || null,
         description: formData.description || null,
         main_image: mainImageUrl,
-        additional_images: additionalImageUrls,
         main_image_focal_point: mainImageFocalPoint || null,
-        additional_images_focal_points: mappedAdditionalImagesFocalPoints,
         agent_id: agentId
       };
+
+      // Gérer les groupes d'images si les fonctions sont disponibles
+      if (uploadGroupImages && getGroupsForSave) {
+        // Nouveau système avec groupes
+        const uploadedGroupUrls = await uploadGroupImages()
+        const finalImageGroups = getGroupsForSave(uploadedGroupUrls)
+        modelData.image_groups = finalImageGroups
+        
+        // Pour la rétrocompatibilité, extraire toutes les images dans additional_images
+        const allAdditionalImages: string[] = []
+        Object.values(finalImageGroups).forEach(group => {
+          if (Array.isArray(group)) {
+            allAdditionalImages.push(...group)
+          } else if (group && typeof group === 'object' && 'images' in group) {
+            allAdditionalImages.push(...group.images)
+          }
+        })
+        modelData.additional_images = allAdditionalImages
+        modelData.additional_images_focal_points = additionalImagesFocalPoints || null
+      } else {
+        // Ancien système sans groupes
+        // Mapper les focal points des images supplémentaires avec les nouvelles URLs
+        let mappedAdditionalImagesFocalPoints: Record<string, FocalPoint> | null = null;
+        if (additionalImagesFocalPoints && additionalImages && Object.keys(additionalImagesFocalPoints).length > 0) {
+          mappedAdditionalImagesFocalPoints = {};
+          
+          // Mapper les focal points en utilisant l'ordre des images dans additionalImages
+          additionalImages.forEach((tempUrl, index) => {
+            const newUrl = additionalImageUrls[index];
+            const focalPoint = additionalImagesFocalPoints[tempUrl];
+            
+            if (focalPoint && newUrl) {
+              mappedAdditionalImagesFocalPoints![newUrl] = focalPoint;
+            }
+          });
+        }
+        
+        modelData.additional_images = additionalImageUrls
+        modelData.additional_images_focal_points = mappedAdditionalImagesFocalPoints
+      }
       
 
       

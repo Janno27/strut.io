@@ -60,12 +60,9 @@ export function useModelSave({ modelId, onModelUpdated, setIsLoading }: UseModel
 
       // Gérer les groupes d'images si les fonctions sont disponibles
       if (uploadGroupImages && getGroupsForSave) {
-        console.log("💾 Using new image groups system")
         // Nouveau système avec groupes
         const uploadedGroupUrls = await uploadGroupImages()
-        console.log("💾 Uploaded group URLs:", uploadedGroupUrls)
         const finalImageGroups = getGroupsForSave(uploadedGroupUrls)
-        console.log("💾 Final image groups:", finalImageGroups)
         updateData.image_groups = finalImageGroups
         
         // Pour la rétrocompatibilité, extraire toutes les images dans additional_images
@@ -78,14 +75,10 @@ export function useModelSave({ modelId, onModelUpdated, setIsLoading }: UseModel
           }
         })
         updateData.additional_images = allAdditionalImages
-        console.log("💾 All additional images for retrocompatibility:", allAdditionalImages)
       } else {
-        console.log("💾 Using old image system")
         // Ancien système sans groupes
         updateData.additional_images = newAdditionalImageUrls
       }
-      
-      console.log("💾 Final updateData:", updateData)
       
       const { error } = await supabase
         .from('models')

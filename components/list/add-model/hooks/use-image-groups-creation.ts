@@ -1,55 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { ImageGroups, ImageGroup, FocalPoint } from "../types"
+import { ImageGroups, ImageGroup, FocalPoint } from "../../detail/types"
 
-interface UseImageGroupsProps {
-  modelId: string
-  additionalImages?: string[]
-  imageGroups?: ImageGroups
-  additionalImagesFocalPoints?: Record<string, FocalPoint>
-  isEditing: boolean
-}
-
-export function useImageGroups({ 
-  modelId, 
-  additionalImages = [], 
-  imageGroups: initialImageGroups, 
-  additionalImagesFocalPoints = {},
-  isEditing 
-}: UseImageGroupsProps) {
+export function useImageGroupsCreation() {
   // État des groupes d'images
-  const [imageGroups, setImageGroups] = useState<ImageGroups>(() => {
-    // Si on a déjà des groupes, les utiliser
-    if (initialImageGroups) {
-      return initialImageGroups
-    }
-    
-    // Sinon, créer la structure initiale avec les images existantes
-    if (additionalImages.length > 0) {
-      return { ungrouped: additionalImages }
-    }
-    
-    // Structure vide
-    return { ungrouped: [] }
-  })
-
-  // Mettre à jour les groupes quand les données du modèle changent
-  useEffect(() => {
-    if (initialImageGroups) {
-      setImageGroups(initialImageGroups)
-    } else if (additionalImages.length > 0) {
-      setImageGroups({ ungrouped: additionalImages })
-    } else {
-      setImageGroups({ ungrouped: [] })
-    }
-  }, [initialImageGroups, additionalImages])
+  const [imageGroups, setImageGroups] = useState<ImageGroups>({ ungrouped: [] })
 
   // États pour les nouvelles images temporaires
   const [tempImageFiles, setTempImageFiles] = useState<Record<string, File[]>>({})
   const [tempImageUrls, setTempImageUrls] = useState<Record<string, string[]>>({})
-  const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
+  const [additionalImagesFocalPoints, setAdditionalImagesFocalPoints] = useState<Record<string, FocalPoint>>({})
 
   const supabase = createClient()
 
@@ -122,7 +84,7 @@ export function useImageGroups({
     const imageToRemove = images[imageIndex]
     if (!imageToRemove) return
 
-    // Si c'est une image temporaire, nettoyer l'URL blob
+    // Nettoyer l'URL blob
     const tempUrls = tempImageUrls[groupId] || []
     if (tempUrls.includes(imageToRemove)) {
       cleanupBlobUrls([imageToRemove])
@@ -139,9 +101,6 @@ export function useImageGroups({
         ...prev,
         [groupId]: tempUrls.filter(url => url !== imageToRemove)
       }))
-    } else {
-      // Image existante de la BDD - ajouter à la liste de suppression
-      setImagesToDelete(prev => [...prev, imageToRemove])
     }
 
     // Supprimer du groupe
@@ -177,6 +136,30 @@ export function useImageGroups({
     
     const imageUrl = images[imageIndex]
     return { groupId, imageIndex, imageUrl }
+  }
+
+  // Gérer la réorganisation des images dans un groupe
+  const handleImagesReorder = (groupId: string, newImages: string[]) => {
+    setImageGroups(prev => {
+      if (groupId === 'ungrouped') {
+        return {
+          ...prev,
+          ungrouped: newImages
+        }
+      } else {
+        const currentGroup = prev[groupId]
+        if (currentGroup && !Array.isArray(currentGroup)) {
+          return {
+            ...prev,
+            [groupId]: {
+              ...currentGroup,
+              images: newImages
+            }
+          }
+        }
+        return prev
+      }
+    })
   }
 
   // Télécharger les nouvelles images
@@ -230,8 +213,6 @@ export function useImageGroups({
             finalImages[tempIndex] = newUrls[index]
           }
         })
-        // Filtrer les images supprimées
-        finalImages = finalImages.filter(img => !imagesToDelete.includes(img))
         
         if (finalImages.length > 0) {
           finalGroups.ungrouped = finalImages
@@ -245,10 +226,8 @@ export function useImageGroups({
             finalImages[tempIndex] = newUrls[index]
           }
         })
-        // Filtrer les images supprimées
-        finalImages = finalImages.filter(img => !imagesToDelete.includes(img))
         
-        // Toujours conserver le groupe s'il a un nom, même s'il est vide temporairement
+        // Toujours conserver le groupe s'il a un nom
         finalGroups[groupId] = {
           name: group.name,
           images: finalImages
@@ -267,33 +246,29 @@ export function useImageGroups({
     // Réinitialiser les états
     setTempImageFiles({})
     setTempImageUrls({})
-    setImagesToDelete([])
+    setImageGroups({ ungrouped: [] })
+    setAdditionalImagesFocalPoints({})
   }
 
-  // Réinitialiser les groupes
-  const resetImageGroups = () => {
-    cleanupAndReset()
-    
-    // Réinitialiser avec les groupes originaux
-    if (initialImageGroups) {
-      setImageGroups(initialImageGroups)
-    } else if (additionalImages.length > 0) {
-      setImageGroups({ ungrouped: additionalImages })
-    } else {
-      setImageGroups({ ungrouped: [] })
-    }
+  // Gérer les focal points
+  const handleFocalPointUpdate = (imageUrl: string, focalPoint: FocalPoint) => {
+    setAdditionalImagesFocalPoints(prev => ({
+      ...prev,
+      [imageUrl]: focalPoint
+    }))
   }
 
   return {
     imageGroups,
     setImageGroups,
-    imagesToDelete,
+    additionalImagesFocalPoints,
     handleImageAdd,
     handleImageRemove,
     handleImageReposition,
+    handleImagesReorder,
+    handleFocalPointUpdate,
     uploadNewImages,
     getGroupsForSave,
     cleanupAndReset,
-    resetImageGroups,
   }
 } 

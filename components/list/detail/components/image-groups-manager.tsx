@@ -133,6 +133,24 @@ export function ImageGroupsManager({
 
   const groupIds = Object.keys(imageGroups)
 
+  // Obtenir l'index global d'une image
+  const getGlobalImageIndex = (groupId: string, localIndex: number): number => {
+    let globalIndex = 0
+    
+    // Parcourir tous les groupes dans l'ordre jusqu'à trouver l'image
+    for (const currentGroupId of groupIds) {
+      const images = getGroupImages(currentGroupId)
+      
+      if (currentGroupId === groupId) {
+        return globalIndex + localIndex
+      }
+      
+      globalIndex += images.length
+    }
+    
+    return localIndex // fallback
+  }
+
   if (!isEditing) {
     // Mode affichage
     return (
@@ -155,7 +173,7 @@ export function ImageGroupsManager({
                     <div 
                       key={`${groupId}-${index}`}
                       className="rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity bg-gray-100 dark:bg-gray-800"
-                      onClick={() => onImageClick?.(imageUrl, index)}
+                      onClick={() => onImageClick?.(imageUrl, getGlobalImageIndex(groupId, index))}
                     >
                       <div className="relative aspect-square">
                         <img

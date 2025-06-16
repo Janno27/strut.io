@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -15,13 +16,22 @@ import { DraggableImageGrid } from "@/components/ui/draggable-image-grid"
 import { useAuth } from "@/lib/auth/auth-provider"
 import { useAddModelForm } from "./hooks/use-add-model-form"
 import { useModelImages } from "./hooks/use-model-images"
+import { useImageGroupsCreation } from "./hooks/use-image-groups-creation"
 import { useModelSubmission } from "./hooks/use-model-submission"
 import { ModelFormFields } from "./components/model-form-fields"
 import { ModelImagesSection } from "./components/model-images-section"
+import { ModelImageGroupsSection } from "./components/model-image-groups-section"
 import { AddModelModalProps } from "./types"
 
 export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }: AddModelModalProps) {
   const { profile } = useAuth()
+
+  // États pour le repositionnement d'image
+  const [isPositionEditorOpen, setIsPositionEditorOpen] = useState(false)
+  const [positionImageUrl, setPositionImageUrl] = useState("")
+  const [positionImageType, setPositionImageType] = useState<"main" | "group">("main")
+  const [positionGroupId, setPositionGroupId] = useState<string>("")
+  const [positionImageIndex, setPositionImageIndex] = useState<number>(-1)
 
   // Hooks pour la gestion du formulaire
   const {
@@ -44,8 +54,6 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
     additionalImages,
     mainImageFile,
     additionalImageFiles,
-    isPositionEditorOpen,
-    positionImageUrl,
     mainImageFocalPoint,
     additionalImagesFocalPoints,
     handleMainImageUpload,
@@ -55,13 +63,57 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
     handleAdditionalImagesReorder,
     handleMainImageReposition,
     handleAdditionalImageReposition,
-    handlePositionComplete,
-    setIsPositionEditorOpen,
+    handlePositionComplete: handleOldPositionComplete,
     resetImages,
   } = useModelImages()
 
+  // Hook pour les groupes d'images
+  const {
+    imageGroups,
+    setImageGroups,
+    additionalImagesFocalPoints: groupImagesFocalPoints,
+    handleImageAdd: handleGroupImageAdd,
+    handleImageRemove: handleGroupImageRemove,
+    handleImageReposition: handleGroupImageReposition,
+    handleImagesReorder: handleGroupImagesReorder,
+    handleFocalPointUpdate,
+    uploadNewImages: uploadGroupImages,
+    getGroupsForSave,
+    cleanupAndReset: cleanupGroupImages,
+  } = useImageGroupsCreation()
+
+  // Gérer le repositionnement des images de groupes
+  const handleGroupImageRepositionClick = (groupId: string, imageIndex: number) => {
+    const repositionData = handleGroupImageReposition(groupId, imageIndex)
+    if (repositionData) {
+      setPositionImageUrl(repositionData.imageUrl)
+      setPositionImageType("group")
+      setPositionGroupId(groupId)
+      setPositionImageIndex(imageIndex)
+      setIsPositionEditorOpen(true)
+    }
+  }
+
+  // Gérer la completion du repositionnement
+  const handlePositionComplete = (focalPoint: { x: number; y: number }) => {
+    if (positionImageType === "main") {
+      handleOldPositionComplete(focalPoint)
+    } else if (positionImageType === "group") {
+      handleFocalPointUpdate(positionImageUrl, focalPoint)
+    }
+    setIsPositionEditorOpen(false)
+  }
+
   // Hook pour la soumission
   const { submitModel } = useModelSubmission({ agentId: profile?.id })
+
+  // Gérer la fermeture du modal
+  const handleClose = () => {
+    resetForm()
+    resetImages()
+    cleanupGroupImages()
+    onClose()
+  }
 
   // Soumettre le formulaire
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,17 +139,21 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
         additionalImageFiles,
         mainImageFocalPoint,
         additionalImagesFocalPoints,
-        additionalImages
+        additionalImages,
+        // Nouveaux paramètres pour les groupes
+        uploadGroupImages,
+        getGroupsForSave
       )
       
       if (success) {
         // Réinitialiser le formulaire et fermer la modale
         resetForm()
         resetImages()
+        cleanupGroupImages()
         
         // Notifier le parent que le modèle a été ajouté
         onModelAdded?.()
-        onClose()
+        handleClose()
       }
     } finally {
       setIsLoading(false)
@@ -105,7 +161,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Ajouter un nouveau modèle</DialogTitle>
@@ -142,23 +198,18 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
             </div>
           </div>
           
-          {/* Images supplémentaires en dessous */}
-          <div className="space-y-2">
-            <Label>Photos supplémentaires</Label>
-            <DraggableImageGrid
-              images={additionalImages}
-              focalPoints={additionalImagesFocalPoints}
-              onImagesChange={handleAdditionalImagesReorder}
-              onImageAdd={handleAdditionalImageUpload}
-              onImageRemove={handleAdditionalImageRemove}
-              onImageReposition={handleAdditionalImageReposition}
-              allowMultiple={true}
-              maxImages={10}
-            />
-          </div>
+          {/* Images supplémentaires avec groupes */}
+          <ModelImageGroupsSection
+            imageGroups={imageGroups}
+            focalPoints={groupImagesFocalPoints}
+            onImageGroupsChange={setImageGroups}
+            onImageAdd={handleGroupImageAdd}
+            onImageRemove={handleGroupImageRemove}
+            onImageReposition={handleGroupImageRepositionClick}
+          />
           
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
               Annuler
             </Button>
             <Button type="submit" disabled={isLoading}>
@@ -173,8 +224,10 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
           onClose={() => setIsPositionEditorOpen(false)}
           imageUrl={positionImageUrl}
           currentFocalPoint={
-            mainImage === positionImageUrl 
+            positionImageType === "main" 
               ? mainImageFocalPoint 
+              : positionImageType === "group"
+              ? groupImagesFocalPoints[positionImageUrl]
               : additionalImagesFocalPoints[positionImageUrl]
           }
           onPositionComplete={handlePositionComplete}

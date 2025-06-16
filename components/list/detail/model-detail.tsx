@@ -225,6 +225,7 @@ export function ModelDetail({
         onClose={handleCloseImageModal}
         onNext={handleNextImage}
         onPrev={handlePrevImage}
+        getAllImages={getAllAdditionalImages}
       />
       
       {/* Éditeur de position d'image */}

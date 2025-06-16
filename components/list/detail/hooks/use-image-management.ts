@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { ModelDetailProps, FocalPoint, ImageGroups } from "../types"
@@ -11,6 +11,9 @@ interface UseImageManagementProps {
 }
 
 export function useImageManagement({ model, isEditing, onModelUpdated }: UseImageManagementProps) {
+  // Référence pour le nettoyage
+  const cleanupRef = useRef<string[]>([])
+  
   // États pour les images (ancien système)
   const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([])
@@ -63,10 +66,6 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
   // Initialisation des images et focal points
   useEffect(() => {
     if (model) {
-      // Nettoyer les anciennes URLs blob avant d'initialiser les nouvelles
-      const urlsToClean = [tempMainImage, ...tempAdditionalImages].filter((url): url is string => Boolean(url));
-      cleanupBlobUrls(urlsToClean);
-      
       // Initialiser les images temporaires et l'ordre
       setTempMainImage(null)
       setTempAdditionalImages([])
@@ -77,37 +76,26 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
       setMainImageFocalPoint(model.main_image_focal_point)
       setAdditionalImagesFocalPoints(model.additional_images_focal_points || {})
     }
-  }, [model])
+  }, [model.id])
 
   // Nettoyage des URLs blob lors du démontage du composant
   useEffect(() => {
     return () => {
-      // Nettoyer toutes les URLs blob créées
-      const urlsToClean = [tempMainImage, ...tempAdditionalImages].filter((url): url is string => Boolean(url));
-      cleanupBlobUrls(urlsToClean);
-    };
-  }, []);
-
-  // Nettoyage des URLs blob lors du changement d'état d'édition
-  useEffect(() => {
-    if (!isEditing) {
-      // Nettoyer les URLs blob temporaires quand on sort du mode édition
-      const urlsToClean = [tempMainImage, ...tempAdditionalImages].filter((url): url is string => Boolean(url));
-      cleanupBlobUrls(urlsToClean);
+      // Nettoyer toutes les URLs blob créées au démontage
+      if (cleanupRef.current.length > 0) {
+        cleanupBlobUrls(cleanupRef.current)
+        cleanupRef.current = []
+      }
     }
-  }, [isEditing]);
+  }, [])
 
   // Réinitialiser les images
   const resetImages = () => {
     // Nettoyer toutes les URLs blob avant de réinitialiser
-    const urlsToClean = [
-      tempMainImage, 
-      ...tempAdditionalImages,
-      // Nettoyer aussi les URLs de crop qui pourraient être orphelines
-      ...(imageOrder.filter(url => url && url.startsWith('blob:')))
-    ].filter((url): url is string => Boolean(url));
-    
-    cleanupBlobUrls(urlsToClean);
+    if (cleanupRef.current.length > 0) {
+      cleanupBlobUrls(cleanupRef.current)
+      cleanupRef.current = []
+    }
     
     setTempMainImage(null)
     setTempAdditionalImages([])
@@ -133,19 +121,22 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
     if (file) {
       // Nettoyer l'ancienne URL blob si elle existe
       if (tempMainImage) {
-        cleanupBlobUrls([tempMainImage]);
+        cleanupBlobUrls([tempMainImage])
+        removeFromCleanup(tempMainImage)
       }
       
       setMainImageFile(file)
       const imageUrl = URL.createObjectURL(file)
       setTempMainImage(imageUrl)
+      addToCleanup(imageUrl)
     }
   }
 
   const handleMainImageRemove = () => {
     // Nettoyer l'URL blob avant de supprimer
     if (tempMainImage) {
-      cleanupBlobUrls([tempMainImage]);
+      cleanupBlobUrls([tempMainImage])
+      removeFromCleanup(tempMainImage)
     }
     setTempMainImage(null)
     setMainImageFile(null)
@@ -165,7 +156,11 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
       files.splice(remainingSlots);
     }
     
-    const newImageUrls = files.map(file => URL.createObjectURL(file))
+    const newImageUrls = files.map(file => {
+      const url = URL.createObjectURL(file)
+      addToCleanup(url)
+      return url
+    })
     
     setAdditionalImageFiles(prev => [...prev, ...files])
     setTempAdditionalImages(prev => [...prev, ...newImageUrls])
@@ -187,12 +182,14 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
       setTempAdditionalImages(prev => prev.filter((_, i) => i !== tempIndex))
       setAdditionalImageFiles(prev => prev.filter((_, i) => i !== tempIndex))
       cleanupBlobUrls([imageToRemove])
+      removeFromCleanup(imageToRemove)
     } else if ((model.additionalImages || []).includes(imageToRemove)) {
       // Image existante de la BDD
       setImagesToDelete(prev => [...prev, imageToRemove])
     } else if (imageToRemove.startsWith('blob:')) {
       // Image blob orpheline - nettoyer directement
       cleanupBlobUrls([imageToRemove])
+      removeFromCleanup(imageToRemove)
     }
     
     // Retirer de l'ordre
@@ -220,7 +217,26 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
 
   // Créer la liste complète des images supplémentaires pour le drag & drop
   const getAllAdditionalImages = () => {
-    // Utiliser l'ordre défini, filtrer les images supprimées et les blobs orphelins
+    // Si on a des groupes d'images, les utiliser en priorité
+    if (imageGroupsHook.imageGroups && Object.keys(imageGroupsHook.imageGroups).length > 0) {
+      const allImagesFromGroups: string[] = []
+      
+      // Parcourir tous les groupes dans l'ordre
+      Object.keys(imageGroupsHook.imageGroups).forEach(groupId => {
+        const group = imageGroupsHook.imageGroups[groupId]
+        if (groupId === 'ungrouped') {
+          const images = Array.isArray(group) ? group : []
+          allImagesFromGroups.push(...images)
+        } else if (group && !Array.isArray(group)) {
+          allImagesFromGroups.push(...group.images)
+        }
+      })
+      
+      // Filtrer les images supprimées
+      return allImagesFromGroups.filter(img => !imagesToDelete.includes(img))
+    }
+    
+    // Sinon, utiliser l'ancien système avec l'ordre défini
     const orderedExistingImages = imageOrder.filter(img => 
       !imagesToDelete.includes(img) && 
       // Filtrer les URLs blob qui ne sont plus dans tempAdditionalImages
@@ -290,19 +306,19 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
   
   const handleNextImage = (e: React.MouseEvent) => {
     e.stopPropagation()
-    const additionalImages = model.additionalImages || []
-    if (selectedImageIndex < additionalImages.length - 1) {
+    const allImages = getAllAdditionalImages()
+    if (selectedImageIndex < allImages.length - 1) {
       setSelectedImageIndex(selectedImageIndex + 1)
-      setSelectedImage(additionalImages[selectedImageIndex + 1])
+      setSelectedImage(allImages[selectedImageIndex + 1])
     }
   }
   
   const handlePrevImage = (e: React.MouseEvent) => {
     e.stopPropagation()
-    const additionalImages = model.additionalImages || []
+    const allImages = getAllAdditionalImages()
     if (selectedImageIndex > 0) {
       setSelectedImageIndex(selectedImageIndex - 1)
-      setSelectedImage(additionalImages[selectedImageIndex - 1])
+      setSelectedImage(allImages[selectedImageIndex - 1])
     }
   }
 
@@ -405,6 +421,18 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
       setPositionGroupId(groupId)
       setIsPositionEditorOpen(true)
     }
+  }
+
+  // Ajouter une URL à la liste de nettoyage
+  const addToCleanup = (url: string) => {
+    if (url && url.startsWith('blob:') && !cleanupRef.current.includes(url)) {
+      cleanupRef.current.push(url)
+    }
+  }
+
+  // Supprimer une URL de la liste de nettoyage
+  const removeFromCleanup = (url: string) => {
+    cleanupRef.current = cleanupRef.current.filter(u => u !== url)
   }
 
   return {

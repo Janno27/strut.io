@@ -25,6 +25,8 @@ interface Model {
   eye_color?: string
   hair_color?: string
   is_shortlisted?: boolean
+  image_groups?: any
+  shared_image_groups?: string[]
 }
 
 export interface ModelGridProps {
