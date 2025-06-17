@@ -2,6 +2,7 @@
 
 import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ModelInfoProps } from "./types"
+import { ModelBooksInfo } from "./components/model-books-info"
 
 export function ModelInfo({ model, firstName, lastName }: ModelInfoProps) {
   return (
@@ -93,6 +94,9 @@ export function ModelInfo({ model, firstName, lastName }: ModelInfoProps) {
           <p className="font-medium">{model.hair_color || "-"}</p>
         </div>
       </div>
+
+      {/* Books & Portfolios */}
+      <ModelBooksInfo books={model.books || []} />
       
       {/* Expérience */}
       {model.experience && model.experience.length > 0 && (

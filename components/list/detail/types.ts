@@ -38,6 +38,8 @@ export interface Model {
   additional_images_focal_points?: Record<string, FocalPoint>
   // Nouveau système de groupes d'images
   image_groups?: ImageGroups
+  // Books & Portfolios
+  books?: any[]
 }
 
 export interface ModelFormData {
@@ -117,6 +119,11 @@ export interface ModelEditFormProps {
   onAdditionalImageRemove?: (index: number) => void
   onAdditionalImageReposition?: (index: number) => void
   showImageManagement?: boolean
+  // Gestion des books
+  books?: any[]
+  onAddBook?: (name: string, url: string) => boolean
+  onRemoveBook?: (bookId: string) => void
+  onUpdateBook?: (bookId: string, name: string, url: string) => boolean
 }
 
 export interface ImageGalleryProps {

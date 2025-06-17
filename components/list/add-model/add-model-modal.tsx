@@ -17,10 +17,12 @@ import { useAuth } from "@/lib/auth/auth-provider"
 import { useAddModelForm } from "./hooks/use-add-model-form"
 import { useModelImages } from "./hooks/use-model-images"
 import { useImageGroupsCreation } from "./hooks/use-image-groups-creation"
+import { useModelBooks } from "./hooks/use-model-books"
 import { useModelSubmission } from "./hooks/use-model-submission"
 import { ModelFormFields } from "./components/model-form-fields"
 import { ModelImagesSection } from "./components/model-images-section"
 import { ModelImageGroupsSection } from "./components/model-image-groups-section"
+import { ModelBooksSectionSimple } from "./components/model-books-section-simple"
 import { AddModelModalProps } from "./types"
 
 export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }: AddModelModalProps) {
@@ -82,6 +84,16 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
     cleanupAndReset: cleanupGroupImages,
   } = useImageGroupsCreation()
 
+  // Hook pour les books
+  const {
+    books,
+    addBook,
+    removeBook,
+    updateBook,
+    resetBooks,
+    getBooksForSave,
+  } = useModelBooks()
+
   // Gérer le repositionnement des images de groupes
   const handleGroupImageRepositionClick = (groupId: string, imageIndex: number) => {
     const repositionData = handleGroupImageReposition(groupId, imageIndex)
@@ -112,6 +124,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
     resetForm()
     resetImages()
     cleanupGroupImages()
+    resetBooks()
     onClose()
   }
 
@@ -142,7 +155,9 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
         additionalImages,
         // Nouveaux paramètres pour les groupes
         uploadGroupImages,
-        getGroupsForSave
+        getGroupsForSave,
+        // Paramètre pour les books
+        getBooksForSave
       )
       
       if (success) {
@@ -150,6 +165,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
         resetForm()
         resetImages()
         cleanupGroupImages()
+        resetBooks()
         
         // Notifier le parent que le modèle a été ajouté
         onModelAdded?.()
@@ -195,6 +211,16 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
                 onSelectChange={handleSelectChange}
                 onCustomValueChange={handleCustomValueChange}
               />
+              
+              {/* Books & Portfolios - Placé après la description */}
+              <div className="mt-4">
+                <ModelBooksSectionSimple
+                  books={books}
+                  onAddBook={addBook}
+                  onRemoveBook={removeBook}
+                  onUpdateBook={updateBook}
+                />
+              </div>
             </div>
           </div>
           

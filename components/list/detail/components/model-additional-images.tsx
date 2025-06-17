@@ -43,8 +43,7 @@ export function ModelAdditionalImages({
   // Si on utilise le nouveau système de groupes
   if (model.image_groups && onImageGroupsChange && onGroupImageAdd && onGroupImageRemove && onGroupImageReposition) {
     return (
-      <div className="space-y-2">
-        {isEditing && <Label>Photos supplémentaires</Label>}
+      <div className="space-y-4">
         <ImageGroupsManager
           imageGroups={model.image_groups}
           focalPoints={model.additional_images_focal_points || {}}
@@ -54,6 +53,8 @@ export function ModelAdditionalImages({
           onImageRemove={onGroupImageRemove}
           onImageReposition={onGroupImageReposition}
           onImageClick={onImageClick}
+          showHeader={isEditing}
+          headerTitle="Photos supplémentaires"
         />
       </div>
     )

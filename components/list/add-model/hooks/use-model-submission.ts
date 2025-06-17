@@ -105,7 +105,9 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
     additionalImages?: string[], // Ajouter l'ordre des images (ancien système)
     // Nouveaux paramètres pour les groupes
     uploadGroupImages?: () => Promise<Record<string, string[]>>,
-    getGroupsForSave?: (uploadedUrls: Record<string, string[]>) => ImageGroups
+    getGroupsForSave?: (uploadedUrls: Record<string, string[]>) => ImageGroups,
+    // Paramètre pour les books
+    getBooksForSave?: () => any
   ): Promise<boolean> => {
     try {
       if (!agentId) {
@@ -178,6 +180,11 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
         
         modelData.additional_images = additionalImageUrls
         modelData.additional_images_focal_points = mappedAdditionalImagesFocalPoints
+      }
+
+      // Ajouter les books si disponibles
+      if (getBooksForSave) {
+        modelData.books = getBooksForSave()
       }
       
 

@@ -27,6 +27,8 @@ interface Model {
   last_name: string
   main_image: string
   is_shortlisted?: boolean
+  shared_image_groups?: string[]
+  shared_books?: string[]
 }
 
 interface Package {
@@ -88,6 +90,8 @@ export function PackageDuplicateDialog({
         .select(`
           model_id,
           is_shortlisted,
+          shared_image_groups,
+          shared_books,
           models (
             id,
             first_name,
@@ -104,7 +108,9 @@ export function PackageDuplicateDialog({
         first_name: item.models.first_name,
         last_name: item.models.last_name,
         main_image: item.models.main_image,
-        is_shortlisted: item.is_shortlisted || false
+        is_shortlisted: item.is_shortlisted || false,
+        shared_image_groups: item.shared_image_groups || [],
+        shared_books: item.shared_books || []
       })) || []
 
       setModels(formattedModels)
@@ -186,24 +192,30 @@ export function PackageDuplicateDialog({
         package_id: string
         model_id: string
         is_shortlisted: boolean
+        shared_image_groups?: string[]
+        shared_books?: string[]
       }> = []
 
-      // Ajouter les modèles shortlistés
+      // Ajouter les modèles shortlistés (avec leurs paramètres)
       const shortlistedModels = models.filter(m => m.is_shortlisted)
       shortlistedModels.forEach(model => {
         modelsToInsert.push({
           package_id: newPackage.id,
           model_id: model.id,
-          is_shortlisted: true
+          is_shortlisted: true,
+          shared_image_groups: model.shared_image_groups || [],
+          shared_books: model.shared_books || []
         })
       })
 
-      // Ajouter les nouveaux modèles (non shortlistés)
+      // Ajouter les nouveaux modèles (non shortlistés, sans paramètres)
       selectedNewModels.forEach(modelId => {
         modelsToInsert.push({
           package_id: newPackage.id,
           model_id: modelId,
-          is_shortlisted: false
+          is_shortlisted: false,
+          shared_image_groups: [],
+          shared_books: []
         })
       })
 

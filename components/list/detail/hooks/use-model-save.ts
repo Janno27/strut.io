@@ -21,7 +21,9 @@ export function useModelSave({ modelId, onModelUpdated, setIsLoading }: UseModel
     customHairColor?: string,
     // Nouveaux paramètres pour les groupes
     uploadGroupImages?: () => Promise<Record<string, string[]>>,
-    getGroupsForSave?: (uploadedUrls: Record<string, string[]>) => ImageGroups
+    getGroupsForSave?: (uploadedUrls: Record<string, string[]>) => ImageGroups,
+    // Paramètre pour les books
+    getBooksForSave?: () => any
   ) => {
     try {
       // Validation de l'ID du modèle
@@ -78,6 +80,11 @@ export function useModelSave({ modelId, onModelUpdated, setIsLoading }: UseModel
       } else {
         // Ancien système sans groupes
         updateData.additional_images = newAdditionalImageUrls
+      }
+
+      // Ajouter les books si disponibles
+      if (getBooksForSave) {
+        updateData.books = getBooksForSave()
       }
       
       const { error } = await supabase

@@ -27,6 +27,7 @@ interface Model {
   is_shortlisted?: boolean
   image_groups?: any
   shared_image_groups?: string[]
+  books?: any[]
 }
 
 export interface ModelGridProps {

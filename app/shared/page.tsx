@@ -34,6 +34,8 @@ interface Model {
   is_shortlisted?: boolean
   image_groups?: any
   shared_image_groups?: string[]
+  books?: any[]
+  shared_books?: string[]
 }
 
 // Type pour le retour de l'API Supabase
@@ -55,6 +57,7 @@ interface PackageModelData {
   model_id: string
   is_shortlisted?: boolean
   shared_image_groups?: string[]
+  shared_books?: string[]
 }
 
 // Type pour les modèles utilisés dans la grille
@@ -78,6 +81,8 @@ interface GridModel {
   is_shortlisted?: boolean
   image_groups?: any
   shared_image_groups?: string[]
+  books?: any[]
+  shared_books?: string[]
 }
 
 // Composant qui utilise useSearchParams
@@ -248,10 +253,10 @@ function SharedPageContent() {
             setPackageName(typedPackageData.name)
             setProjectName(typedProjectData.name)
             
-            // Récupérer les mannequins du package avec les informations de shortlist et groupes partagés
+            // Récupérer les mannequins du package avec les informations de shortlist, groupes partagés et books partagés
             const { data: packageModels, error: packageModelsError } = await supabase
               .from("package_models")
-              .select("model_id, is_shortlisted, shared_image_groups")
+              .select("model_id, is_shortlisted, shared_image_groups, shared_books")
               .eq("package_id", packageId)
               
             if (packageModelsError) {
@@ -271,10 +276,10 @@ function SharedPageContent() {
             const typedPackageModels = packageModels as unknown as PackageModelData[]
             const modelIds = typedPackageModels.map(item => item.model_id)
             
-            // Récupérer les détails des modèles avec les groupes d'images
+            // Récupérer les détails des modèles avec les groupes d'images et books
             const { data: modelsData, error: modelsError } = await supabase
               .from("models")
-              .select("*, image_groups")
+              .select("*, image_groups, books")
               .in("id", modelIds)
               
             if (modelsError) {
@@ -294,19 +299,22 @@ function SharedPageContent() {
             // Typer correctement les données des modèles
             const typedModelsData = modelsData as unknown as Model[]
             
-            // Créer des maps pour les informations de shortlist et groupes partagés
+            // Créer des maps pour les informations de shortlist, groupes partagés et books partagés
             const shortlistMap = new Map<string, boolean>()
             const sharedGroupsMap = new Map<string, string[]>()
+            const sharedBooksMap = new Map<string, string[]>()
             typedPackageModels.forEach(pm => {
               shortlistMap.set(pm.model_id, pm.is_shortlisted || false)
               sharedGroupsMap.set(pm.model_id, pm.shared_image_groups || [])
+              sharedBooksMap.set(pm.model_id, pm.shared_books || [])
             })
             
-            // Ajouter les informations de shortlist et groupes partagés aux modèles
+            // Ajouter les informations de shortlist, groupes partagés et books partagés aux modèles
             const modelsWithShortlist = typedModelsData.map(model => ({
               ...model,
               is_shortlisted: shortlistMap.get(model.id) || false,
-              shared_image_groups: sharedGroupsMap.get(model.id) || []
+              shared_image_groups: sharedGroupsMap.get(model.id) || [],
+              shared_books: sharedBooksMap.get(model.id) || []
             }))
             
             // Séparer les modèles par genre
@@ -329,7 +337,7 @@ function SharedPageContent() {
         
         const { data: modelsData, error: modelsError } = await supabase
           .from("models")
-          .select("*")
+          .select("*, image_groups, books")
           .eq("agent_id", agentId)
         
         if (modelsError) {
@@ -432,6 +440,15 @@ function SharedPageContent() {
         })
       }
 
+      // Filtrer les books selon les books partagés
+      let filteredBooks = model.books
+      if (packageId && model.shared_books && model.shared_books.length > 0) {
+        // Si des books spécifiques sont partagés, ne garder que ceux-là
+        filteredBooks = (model.books || []).filter(book => 
+          model.shared_books?.includes(book.id)
+        )
+      }
+
       return {
         id: model.id,
         name: `${model.first_name} ${model.last_name}`,
@@ -451,7 +468,9 @@ function SharedPageContent() {
         hair_color: model.hair_color,
         is_shortlisted: model.is_shortlisted || false,
         image_groups: filteredImageGroups,
-        shared_image_groups: model.shared_image_groups
+        shared_image_groups: model.shared_image_groups,
+        books: filteredBooks,
+        shared_books: model.shared_books
       }
     })
   }

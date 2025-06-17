@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { ImageGroupsSelector } from './image-groups-selector';
+import { BooksSelector } from './books-selector';
 
 interface Model {
   id: string;
@@ -25,6 +26,8 @@ interface Model {
   waist: number;
   hips: number;
   shared_image_groups?: string[];
+  books?: any[];
+  shared_books?: string[];
 }
 
 interface Package {
@@ -170,12 +173,13 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
                   <TableHead>Genre</TableHead>
                   <TableHead>Mensurations</TableHead>
                   <TableHead className="w-12">Groupes</TableHead>
+                  <TableHead className="w-12">Books</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading[pkg.package_id] ? (
                   <TableRow key={`loading-${pkg.package_id}`}>
-                    <TableCell colSpan={4} className="text-center">
+                    <TableCell colSpan={5} className="text-center">
                       Chargement des mannequins...
                     </TableCell>
                   </TableRow>
@@ -200,11 +204,20 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
                           onUpdate={onUpdate}
                         />
                       </TableCell>
+                      <TableCell>
+                        <BooksSelector
+                          packageId={pkg.package_id}
+                          modelId={model.id}
+                          modelName={`${model.first_name} ${model.last_name}`}
+                          currentSharedBooks={model.shared_books}
+                          onUpdate={onUpdate}
+                        />
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow key={`empty-${pkg.package_id}`}>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                       Aucun mannequin sélectionné pour ce package.
                     </TableCell>
                   </TableRow>

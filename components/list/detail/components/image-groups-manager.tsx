@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
 import { DraggableImageGrid } from "@/components/ui/draggable-image-grid"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { FolderPlus, Edit2, Trash2, GripVertical } from "lucide-react"
@@ -19,6 +19,8 @@ interface ImageGroupsManagerProps {
   onImageRemove: (groupId: string, imageIndex: number) => void
   onImageReposition: (groupId: string, imageIndex: number) => void
   onImageClick?: (imageUrl: string, index: number) => void
+  showHeader?: boolean
+  headerTitle?: string
 }
 
 export function ImageGroupsManager({
@@ -29,7 +31,9 @@ export function ImageGroupsManager({
   onImageAdd,
   onImageRemove,
   onImageReposition,
-  onImageClick
+  onImageClick,
+  showHeader = false,
+  headerTitle = ""
 }: ImageGroupsManagerProps) {
   const [newGroupName, setNewGroupName] = useState("")
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
@@ -197,104 +201,144 @@ export function ImageGroupsManager({
   // Mode édition
   return (
     <div className="space-y-6">
-      {/* Bouton pour créer un nouveau groupe */}
-      <div className="flex justify-end">
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
-              <FolderPlus className="w-4 h-4 mr-2" />
-              Créer un nouveau groupe
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Créer un nouveau groupe d'images</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="group-name">Nom du groupe</Label>
-                <Input
-                  id="group-name"
-                  value={newGroupName}
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                  placeholder="Ex: Shooting été 2024"
-                  onKeyPress={(e) => e.key === 'Enter' && handleCreateGroup()}
-                />
+      {/* Header avec titre et bouton créer groupe */}
+      {showHeader && (
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">{headerTitle}</Label>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 text-xs">
+                <FolderPlus className="w-3 h-3 mr-1" />
+                Créer un nouveau groupe
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Créer un nouveau groupe d'images</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="group-name">Nom du groupe</Label>
+                  <Input
+                    id="group-name"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="Ex: Shooting été 2024"
+                    onKeyPress={(e) => e.key === 'Enter' && handleCreateGroup()}
+                  />
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button onClick={handleCreateGroup} disabled={!newGroupName.trim()}>
+                    Créer
+                  </Button>
+                </div>
               </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                  Annuler
-                </Button>
-                <Button onClick={handleCreateGroup} disabled={!newGroupName.trim()}>
-                  Créer
-                </Button>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+      
+      {/* Bouton original (affiché seulement si pas de header) */}
+      {!showHeader && (
+        <div className="flex justify-end">
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
+                <FolderPlus className="w-4 h-4 mr-2" />
+                Créer un nouveau groupe
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Créer un nouveau groupe d'images</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="group-name">Nom du groupe</Label>
+                  <Input
+                    id="group-name"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="Ex: Shooting été 2024"
+                    onKeyPress={(e) => e.key === 'Enter' && handleCreateGroup()}
+                  />
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button onClick={handleCreateGroup} disabled={!newGroupName.trim()}>
+                    Créer
+                  </Button>
+                </div>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
 
       {/* Groupes d'images */}
       {groupIds.map((groupId) => (
-        <Card key={groupId} className="border-2 border-dashed border-gray-200 dark:border-gray-700">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <GripVertical className="w-4 h-4 text-gray-400" />
-                {editingGroupId === groupId ? (
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      value={editingGroupName}
-                      onChange={(e) => setEditingGroupName(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleRenameGroup(groupId)}
-                      onBlur={() => handleRenameGroup(groupId)}
-                      className="text-sm"
-                      autoFocus
-                    />
-                  </div>
-                ) : (
-                  <CardTitle className="text-base">{getGroupName(groupId)}</CardTitle>
-                )}
-              </div>
-              
-              {groupId !== 'ungrouped' && (
-                <div className="flex items-center space-x-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setEditingGroupId(groupId)
-                      setEditingGroupName(getGroupName(groupId))
-                    }}
-                  >
-                    <Edit2 className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteGroup(groupId)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
+        <div key={groupId} className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 space-y-3">
+          {/* Header du groupe */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <GripVertical className="w-4 h-4 text-gray-400" />
+              {editingGroupId === groupId ? (
+                <div className="flex items-center space-x-2">
+                  <Input
+                    value={editingGroupName}
+                    onChange={(e) => setEditingGroupName(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleRenameGroup(groupId)}
+                    onBlur={() => handleRenameGroup(groupId)}
+                    className="text-sm"
+                    autoFocus
+                  />
                 </div>
+              ) : (
+                <h3 className="text-sm font-medium">{getGroupName(groupId)}</h3>
               )}
             </div>
-          </CardHeader>
+            
+            {groupId !== 'ungrouped' && (
+              <div className="flex items-center space-x-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditingGroupId(groupId)
+                    setEditingGroupName(getGroupName(groupId))
+                  }}
+                >
+                  <Edit2 className="w-3 h-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteGroup(groupId)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            )}
+          </div>
           
-          <CardContent>
-            <DraggableImageGrid
-              images={getGroupImages(groupId)}
-              focalPoints={focalPoints}
-              onImagesChange={(newImages) => handleImagesReorder(groupId, newImages)}
-              onImageAdd={(e) => onImageAdd(groupId, e)}
-              onImageRemove={(index) => onImageRemove(groupId, index)}
-              onImageReposition={(index) => onImageReposition(groupId, index)}
-              allowMultiple={true}
-              maxImages={20}
-            />
-          </CardContent>
-        </Card>
+          {/* Contenu du groupe */}
+          <DraggableImageGrid
+            images={getGroupImages(groupId)}
+            focalPoints={focalPoints}
+            onImagesChange={(newImages) => handleImagesReorder(groupId, newImages)}
+            onImageAdd={(e) => onImageAdd(groupId, e)}
+            onImageRemove={(index) => onImageRemove(groupId, index)}
+            onImageReposition={(index) => onImageReposition(groupId, index)}
+            allowMultiple={true}
+            maxImages={20}
+          />
+        </div>
       ))}
     </div>
   )

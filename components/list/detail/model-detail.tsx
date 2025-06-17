@@ -10,6 +10,7 @@ import { ImagePositionEditor } from "./components/image-position-editor"
 // Hooks personnalisés
 import { useModelDetail } from "./hooks/use-model-detail"
 import { useImageManagement } from "./hooks/use-image-management"
+import { useModelBooksManagement } from "./hooks/use-model-books-management"
 import { useModelSave } from "./hooks/use-model-save"
 
 // Nouveaux composants
@@ -88,6 +89,16 @@ export function ModelDetail({
     getGroupsForSave,
   } = useImageManagement({ model, isEditing, onModelUpdated })
 
+  // Hook pour la gestion des books
+  const {
+    books,
+    addBook,
+    removeBook,
+    updateBook,
+    resetBooks,
+    getBooksForSave,
+  } = useModelBooksManagement({ model, isEditing })
+
   // Hook pour la sauvegarde
   const { saveModel } = useModelSave({ 
     modelId: model.id, 
@@ -105,6 +116,7 @@ export function ModelDetail({
   // Annuler l'édition
   const handleCancelEdit = () => {
     resetImages()
+    resetBooks()
     resetFormData()
     setIsEditing(false)
   }
@@ -121,7 +133,9 @@ export function ModelDetail({
       customHairColor,
       // Nouvelles fonctions pour les groupes
       uploadGroupImages,
-      getGroupsForSave
+      getGroupsForSave,
+      // Fonction pour les books
+      getBooksForSave
     )
     if (success) {
       setIsEditing(false)
@@ -180,6 +194,10 @@ export function ModelDetail({
                 onCustomEyeColorChange={handleCustomEyeColorChange}
                 onCustomHairColorChange={handleCustomHairColorChange}
                 showImageManagement={false}
+                books={books}
+                onAddBook={addBook}
+                onRemoveBook={removeBook}
+                onUpdateBook={updateBook}
               />
             ) : (
               <ModelInfo
@@ -193,7 +211,7 @@ export function ModelDetail({
       </div>
       
       {/* Images additionnelles */}
-      <div className="space-y-2">
+      <div className="space-y-6">
         <ModelAdditionalImages
           model={{ 
             ...model, 
@@ -213,6 +231,7 @@ export function ModelDetail({
           onGroupImageRemove={handleGroupImageRemove}
           onGroupImageReposition={handleGroupImageReposition}
         />
+
       </div>
       
       {/* Modal d'image plein écran */}
