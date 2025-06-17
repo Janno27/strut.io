@@ -1,9 +1,9 @@
 "use client"
 
-import Image from "next/image"
 import { motion } from "framer-motion"
 import { Heart, Star } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { OptimizedImage } from "@/components/ui/optimized-image"
 
 interface ModelCardProps {
   model: {
@@ -14,7 +14,7 @@ interface ModelCardProps {
     bust: number
     waist: number
     hips: number
-    imageUrl: string
+    imageUrl: string | null | undefined
     is_shortlisted?: boolean
   }
   onClick: () => void
@@ -55,13 +55,16 @@ export function ModelCard({
           }}
           transition={{ duration: 0.3 }}
         >
-          <Image
-            src={model.imageUrl}
+          <OptimizedImage
+            src={model.imageUrl || ""}
             alt={model.name}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, 33vw"
             priority
+            cacheWidth={400}
+            cacheHeight={400}
+            cacheQuality={80}
           />
           
           {/* Badge Shortlist */}

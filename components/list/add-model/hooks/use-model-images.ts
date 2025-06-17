@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { validateAndProcessImage } from "../utils/model-utils"
+import { validateAndCompressImage } from "@/lib/services/image-compression"
 import { FocalPoint } from "../types"
 
 export function useModelImages() {
@@ -34,23 +35,36 @@ export function useModelImages() {
   };
 
   // Télécharger l'image principale
-  const handleMainImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      const validation = validateAndProcessImage(file);
-      if (!validation.isValid) {
-        toast.error(validation.error || "Erreur de validation de l'image");
-        return;
+      try {
+        // Valider et compresser l'image
+        const result = await validateAndCompressImage(file, true) // true pour image principale
+        
+        if (!result.isValid || !result.file) {
+          toast.error(result.error || "Erreur de validation de l'image")
+          return
+        }
+        
+        // Nettoyer l'ancienne URL blob si elle existe
+        if (mainImage) {
+          cleanupBlobUrls([mainImage])
+        }
+        
+        setMainImageFile(result.file)
+        const imageUrl = URL.createObjectURL(result.file)
+        setMainImage(imageUrl)
+        
+        // Afficher les informations de compression
+        const compressionRatio = ((file.size - result.file.size) / file.size) * 100
+        if (compressionRatio > 5) { // Seulement si compression significative
+          toast.success(`Image compressée avec succès (${compressionRatio.toFixed(1)}% de réduction)`)
+        }
+      } catch (error) {
+        console.error('Erreur lors du traitement de l\'image:', error)
+        toast.error('Erreur lors du traitement de l\'image')
       }
-      
-      // Nettoyer l'ancienne URL blob si elle existe
-      if (mainImage) {
-        cleanupBlobUrls([mainImage]);
-      }
-      
-      setMainImageFile(file)
-      const imageUrl = URL.createObjectURL(file)
-      setMainImage(imageUrl)
     }
   }
 
@@ -66,52 +80,81 @@ export function useModelImages() {
   }
 
   // Télécharger des images supplémentaires (multiple)
-  const handleAdditionalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAdditionalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files && files.length > 0) {
-      // Convertir FileList en Array pour pouvoir itérer dessus
-      const filesArray = Array.from(files)
-      
-      // Valider chaque fichier
-      const validFiles: File[] = [];
-      const errors: string[] = [];
-      
-      filesArray.forEach((file, index) => {
-        const validation = validateAndProcessImage(file);
-        if (validation.isValid) {
-          validFiles.push(file);
-        } else {
-          errors.push(`Image ${index + 1}: ${validation.error}`);
-        }
-      });
-      
-      // Afficher les erreurs s'il y en a
-      if (errors.length > 0) {
-        toast.error(`Erreurs de validation:\n${errors.join('\n')}`);
-      }
-      
-      // Vérifier la limite d'images (max 10 images supplémentaires)
-      const currentCount = additionalImageFiles.length;
-      const maxAdditional = 10;
-      const remainingSlots = maxAdditional - currentCount;
-      
-      if (validFiles.length > remainingSlots) {
-        toast.warning(`Limite atteinte. Seulement ${remainingSlots} images supplémentaires peuvent être ajoutées.`);
-        validFiles.splice(remainingSlots);
-      }
-      
-      if (validFiles.length > 0) {
-        // Ajouter les nouveaux fichiers à la liste existante
-        const newFiles = [...additionalImageFiles, ...validFiles]
-        setAdditionalImageFiles(newFiles)
+      try {
+        // Convertir FileList en Array pour pouvoir itérer dessus
+        const filesArray = Array.from(files)
         
-        // Créer les URLs pour l'aperçu
-        const newImageUrls = validFiles.map(file => URL.createObjectURL(file))
-        setAdditionalImages(prev => [...prev, ...newImageUrls])
+        // Vérifier la limite d'images (max 10 images supplémentaires)
+        const currentCount = additionalImageFiles.length
+        const maxAdditional = 10
+        const remainingSlots = maxAdditional - currentCount
+        
+        if (filesArray.length > remainingSlots) {
+          toast.warning(`Limite atteinte. Seulement ${remainingSlots} images supplémentaires peuvent être ajoutées.`)
+          filesArray.splice(remainingSlots)
+        }
+        
+        // Traiter chaque fichier en parallèle
+        const fileProcessingPromises = filesArray.map(async (file, index) => {
+          try {
+            const result = await validateAndCompressImage(file, false) // false pour images supplémentaires
+            return { index, result, originalSize: file.size }
+          } catch (error) {
+            console.error(`Erreur lors du traitement de l'image ${index + 1}:`, error)
+            return { index, result: { isValid: false, error: 'Erreur de traitement' }, originalSize: file.size }
+          }
+        })
+        
+        const processedFiles = await Promise.all(fileProcessingPromises)
+        
+        // Séparer les fichiers valides et les erreurs
+        const validFiles: File[] = []
+        const errors: string[] = []
+        let totalCompressionInfo = { originalSize: 0, compressedSize: 0, count: 0 }
+        
+        processedFiles.forEach(({ index, result, originalSize }) => {
+          if (result.isValid && result.file) {
+            validFiles.push(result.file)
+            totalCompressionInfo.originalSize += originalSize
+            totalCompressionInfo.compressedSize += result.file.size
+            totalCompressionInfo.count++
+          } else {
+            errors.push(`Image ${index + 1}: ${result.error}`)
+          }
+        })
+        
+        // Afficher les erreurs s'il y en a
+        if (errors.length > 0) {
+          toast.error(`Erreurs de validation:\n${errors.join('\n')}`)
+        }
+        
+        if (validFiles.length > 0) {
+          // Ajouter les nouveaux fichiers à la liste existante
+          const newFiles = [...additionalImageFiles, ...validFiles]
+          setAdditionalImageFiles(newFiles)
+          
+          // Créer les URLs pour l'aperçu
+          const newImageUrls = validFiles.map(file => URL.createObjectURL(file))
+          setAdditionalImages(prev => [...prev, ...newImageUrls])
+          
+          // Afficher les informations de compression globales
+          if (totalCompressionInfo.count > 0) {
+            const compressionRatio = ((totalCompressionInfo.originalSize - totalCompressionInfo.compressedSize) / totalCompressionInfo.originalSize) * 100
+            if (compressionRatio > 5) {
+              toast.success(`${totalCompressionInfo.count} images compressées (${compressionRatio.toFixed(1)}% de réduction)`)
+            }
+          }
+        }
+        
+        // Réinitialiser l'input de fichier
+        e.target.value = ""
+      } catch (error) {
+        console.error('Erreur lors du traitement des images:', error)
+        toast.error('Erreur lors du traitement des images')
       }
-      
-      // Réinitialiser l'input de fichier pour permettre de sélectionner les mêmes fichiers à nouveau si nécessaire
-      e.target.value = ""
     }
   }
 

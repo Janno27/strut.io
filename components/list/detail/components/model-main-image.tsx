@@ -1,6 +1,6 @@
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Upload, X, Move } from "lucide-react"
+import { OptimizedImage } from "@/components/ui/optimized-image"
 import { FocalPoint } from "../types"
 
 interface ModelMainImageProps {
@@ -30,14 +30,16 @@ export function ModelMainImage({
     
     return (
       <div className="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-        <Image
+        <OptimizedImage
           src={imageUrl}
           alt={name}
           fill
           className="object-cover"
-          style={{ objectPosition }}
+          objectPosition={objectPosition}
           sizes="(max-width: 768px) 100vw, 50vw"
           priority
+          cacheWidth={600}
+          cacheHeight={600}
         />
       </div>
     )
@@ -48,12 +50,14 @@ export function ModelMainImage({
     <div className="relative aspect-square">
       {tempMainImage ? (
         <>
-          <Image
+          <OptimizedImage
             src={tempMainImage}
             alt="Nouvelle image principale"
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, 50vw"
+            cacheWidth={600}
+            cacheHeight={600}
           />
           <Button
             variant="destructive"
@@ -66,13 +70,15 @@ export function ModelMainImage({
         </>
       ) : (
         <>
-          <Image
+          <OptimizedImage
             src={imageUrl}
             alt={name}
             fill
             className="object-cover"
-            style={{ objectPosition: focalPoint ? `${focalPoint.x}% ${focalPoint.y}%` : 'center' }}
+            objectPosition={focalPoint ? `${focalPoint.x}% ${focalPoint.y}%` : 'center'}
             sizes="(max-width: 768px) 100vw, 50vw"
+            cacheWidth={600}
+            cacheHeight={600}
           />
           <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">

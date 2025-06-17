@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { ImageGroups, ImageGroup, FocalPoint } from "../types"
+import { validateAndCompressImage } from "@/lib/services/image-compression"
+import { toast } from "sonner"
 
 interface UseImageGroupsProps {
   modelId: string
@@ -67,49 +69,98 @@ export function useImageGroups({
   }
 
   // Ajouter des images à un groupe
-  const handleImageAdd = (groupId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageAdd = async (groupId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
-    // Créer les URLs temporaires
-    const newImageUrls = files.map(file => URL.createObjectURL(file))
-
-    // Ajouter les fichiers temporaires
-    setTempImageFiles(prev => ({
-      ...prev,
-      [groupId]: [...(prev[groupId] || []), ...files]
-    }))
-
-    // Ajouter les URLs temporaires
-    setTempImageUrls(prev => ({
-      ...prev,
-      [groupId]: [...(prev[groupId] || []), ...newImageUrls]
-    }))
-
-    // Ajouter les images au groupe
-    setImageGroups(prev => {
-      const group = prev[groupId]
-      
-      if (groupId === 'ungrouped') {
-        const currentImages = Array.isArray(group) ? group : []
-        return {
-          ...prev,
-          ungrouped: [...currentImages, ...newImageUrls]
+    try {
+      // Traiter chaque fichier en parallèle
+      const fileProcessingPromises = files.map(async (file, index) => {
+        try {
+          const result = await validateAndCompressImage(file, false) // false pour images supplémentaires
+          return { index, result, originalSize: file.size }
+        } catch (error) {
+          console.error(`Erreur lors du traitement de l'image ${index + 1}:`, error)
+          return { index, result: { isValid: false, error: 'Erreur de traitement' }, originalSize: file.size }
         }
-      } else {
-        const currentGroup = (group && !Array.isArray(group)) ? group : { name: "Nouveau groupe", images: [] }
-        return {
+      })
+      
+      const processedFiles = await Promise.all(fileProcessingPromises)
+      
+      // Séparer les fichiers valides et les erreurs
+      const validFiles: File[] = []
+      const errors: string[] = []
+      let totalCompressionInfo = { originalSize: 0, compressedSize: 0, count: 0 }
+      
+      processedFiles.forEach(({ index, result, originalSize }) => {
+        if (result.isValid && result.file) {
+          validFiles.push(result.file)
+          totalCompressionInfo.originalSize += originalSize
+          totalCompressionInfo.compressedSize += result.file.size
+          totalCompressionInfo.count++
+        } else {
+          errors.push(`Image ${index + 1}: ${result.error}`)
+        }
+      })
+      
+      // Afficher les erreurs s'il y en a
+      if (errors.length > 0) {
+        toast.error(`Erreurs de validation:\n${errors.join('\n')}`)
+      }
+      
+      if (validFiles.length > 0) {
+        // Créer les URLs temporaires pour les fichiers valides
+        const newImageUrls = validFiles.map(file => URL.createObjectURL(file))
+
+        // Ajouter les fichiers temporaires
+        setTempImageFiles(prev => ({
           ...prev,
-          [groupId]: {
-            ...currentGroup,
-            images: [...currentGroup.images, ...newImageUrls]
+          [groupId]: [...(prev[groupId] || []), ...validFiles]
+        }))
+
+        // Ajouter les URLs temporaires
+        setTempImageUrls(prev => ({
+          ...prev,
+          [groupId]: [...(prev[groupId] || []), ...newImageUrls]
+        }))
+
+        // Ajouter les images au groupe
+        setImageGroups(prev => {
+          const group = prev[groupId]
+          
+          if (groupId === 'ungrouped') {
+            const currentImages = Array.isArray(group) ? group : []
+            return {
+              ...prev,
+              ungrouped: [...currentImages, ...newImageUrls]
+            }
+          } else {
+            const currentGroup = (group && !Array.isArray(group)) ? group : { name: "Nouveau groupe", images: [] }
+            return {
+              ...prev,
+              [groupId]: {
+                ...currentGroup,
+                images: [...currentGroup.images, ...newImageUrls]
+              }
+            }
+          }
+        })
+        
+        // Afficher les informations de compression globales
+        if (totalCompressionInfo.count > 0) {
+          const compressionRatio = ((totalCompressionInfo.originalSize - totalCompressionInfo.compressedSize) / totalCompressionInfo.originalSize) * 100
+          if (compressionRatio > 5) {
+            toast.success(`${totalCompressionInfo.count} images compressées (${compressionRatio.toFixed(1)}% de réduction)`)
           }
         }
       }
-    })
 
-    // Réinitialiser l'input
-    e.target.value = ""
+      // Réinitialiser l'input
+      e.target.value = ""
+    } catch (error) {
+      console.error('Erreur lors du traitement des images:', error)
+      toast.error('Erreur lors du traitement des images')
+    }
   }
 
   // Supprimer une image d'un groupe

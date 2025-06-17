@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { ModelDetailProps, FocalPoint, ImageGroups } from "../types"
 import { useImageGroups } from "./use-image-groups"
+import { validateAndCompressImage } from "@/lib/services/image-compression"
 
 interface UseImageManagementProps {
   model: ModelDetailProps['model']
@@ -116,19 +117,38 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
   }
 
   // Gestion de l'image principale
-  const handleMainImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      // Nettoyer l'ancienne URL blob si elle existe
-      if (tempMainImage) {
-        cleanupBlobUrls([tempMainImage])
-        removeFromCleanup(tempMainImage)
+      try {
+        // Valider et compresser l'image
+        const result = await validateAndCompressImage(file, true) // true pour image principale
+        
+        if (!result.isValid || !result.file) {
+          toast.error(result.error || "Erreur de validation de l'image")
+          return
+        }
+        
+        // Nettoyer l'ancienne URL blob si elle existe
+        if (tempMainImage) {
+          cleanupBlobUrls([tempMainImage])
+          removeFromCleanup(tempMainImage)
+        }
+        
+        setMainImageFile(result.file)
+        const imageUrl = URL.createObjectURL(result.file)
+        setTempMainImage(imageUrl)
+        addToCleanup(imageUrl)
+        
+        // Afficher les informations de compression
+        const compressionRatio = ((file.size - result.file.size) / file.size) * 100
+        if (compressionRatio > 5) {
+          toast.success(`Image compressée avec succès (${compressionRatio.toFixed(1)}% de réduction)`)
+        }
+      } catch (error) {
+        console.error('Erreur lors du traitement de l\'image:', error)
+        toast.error('Erreur lors du traitement de l\'image')
       }
-      
-      setMainImageFile(file)
-      const imageUrl = URL.createObjectURL(file)
-      setTempMainImage(imageUrl)
-      addToCleanup(imageUrl)
     }
   }
 
@@ -143,33 +163,83 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
   }
 
   // Gestion des images supplémentaires
-  const handleAdditionalImageAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAdditionalImageAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     
-    // Valider le nombre total d'images
-    const currentImageCount = (model.additionalImages?.length || 0) + tempAdditionalImages.length - imagesToDelete.length;
-    const remainingSlots = 10 - currentImageCount; // Limite de 10 images
+    if (files.length === 0) return
     
-    if (files.length > remainingSlots) {
-      console.warn(`Limite d'images atteinte. Seulement ${remainingSlots} images peuvent être ajoutées.`);
-      // Prendre seulement le nombre d'images autorisé
-      files.splice(remainingSlots);
+    try {
+      // Valider le nombre total d'images
+      const currentImageCount = (model.additionalImages?.length || 0) + tempAdditionalImages.length - imagesToDelete.length
+      const remainingSlots = 10 - currentImageCount // Limite de 10 images
+      
+      if (files.length > remainingSlots) {
+        toast.warning(`Limite d'images atteinte. Seulement ${remainingSlots} images peuvent être ajoutées.`)
+        files.splice(remainingSlots)
+      }
+      
+      // Traiter chaque fichier en parallèle
+      const fileProcessingPromises = files.map(async (file, index) => {
+        try {
+          const result = await validateAndCompressImage(file, false) // false pour images supplémentaires
+          return { index, result, originalSize: file.size }
+        } catch (error) {
+          console.error(`Erreur lors du traitement de l'image ${index + 1}:`, error)
+          return { index, result: { isValid: false, error: 'Erreur de traitement' }, originalSize: file.size }
+        }
+      })
+      
+      const processedFiles = await Promise.all(fileProcessingPromises)
+      
+      // Séparer les fichiers valides et les erreurs
+      const validFiles: File[] = []
+      const errors: string[] = []
+      let totalCompressionInfo = { originalSize: 0, compressedSize: 0, count: 0 }
+      
+      processedFiles.forEach(({ index, result, originalSize }) => {
+        if (result.isValid && result.file) {
+          validFiles.push(result.file)
+          totalCompressionInfo.originalSize += originalSize
+          totalCompressionInfo.compressedSize += result.file.size
+          totalCompressionInfo.count++
+        } else {
+          errors.push(`Image ${index + 1}: ${result.error}`)
+        }
+      })
+      
+      // Afficher les erreurs s'il y en a
+      if (errors.length > 0) {
+        toast.error(`Erreurs de validation:\n${errors.join('\n')}`)
+      }
+      
+      if (validFiles.length > 0) {
+        const newImageUrls = validFiles.map(file => {
+          const url = URL.createObjectURL(file)
+          addToCleanup(url)
+          return url
+        })
+        
+        setAdditionalImageFiles(prev => [...prev, ...validFiles])
+        setTempAdditionalImages(prev => [...prev, ...newImageUrls])
+        
+        // Ajouter les nouvelles images à l'ordre
+        setImageOrder(prev => [...prev, ...newImageUrls])
+        
+        // Afficher les informations de compression globales
+        if (totalCompressionInfo.count > 0) {
+          const compressionRatio = ((totalCompressionInfo.originalSize - totalCompressionInfo.compressedSize) / totalCompressionInfo.originalSize) * 100
+          if (compressionRatio > 5) {
+            toast.success(`${totalCompressionInfo.count} images compressées (${compressionRatio.toFixed(1)}% de réduction)`)
+          }
+        }
+      }
+      
+      // Réinitialiser l'input
+      e.target.value = ""
+    } catch (error) {
+      console.error('Erreur lors du traitement des images:', error)
+      toast.error('Erreur lors du traitement des images')
     }
-    
-    const newImageUrls = files.map(file => {
-      const url = URL.createObjectURL(file)
-      addToCleanup(url)
-      return url
-    })
-    
-    setAdditionalImageFiles(prev => [...prev, ...files])
-    setTempAdditionalImages(prev => [...prev, ...newImageUrls])
-    
-    // Ajouter les nouvelles images à l'ordre
-    setImageOrder(prev => [...prev, ...newImageUrls])
-    
-    // Réinitialiser l'input
-    e.target.value = ""
   }
 
   const handleAdditionalImageRemoveByIndex = (index: number) => {
