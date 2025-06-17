@@ -11,62 +11,17 @@ interface UseModelSubmissionProps {
 export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
   const supabase = createClient()
 
-  // Télécharger les images sur Supabase Storage et récupérer les URLs publiques
+  // Télécharger les images supplémentaires sur Supabase Storage (plus d'image principale)
   const uploadImagesToStorage = async (
-    mainImageFile: File | null,
     additionalImageFiles: File[],
     formData: AddModelFormData
   ): Promise<ModelImageUploadResult> => {
     try {
-      // Générer une image par défaut si pas d'image principale
-      let finalMainImageFile = mainImageFile;
-      if (!mainImageFile) {
-        const defaultImageDataUrl = await generateDefaultImage(formData);
-        // Convertir dataURL en blob puis en file
-        const response = await fetch(defaultImageDataUrl);
-        const blob = await response.blob();
-        finalMainImageFile = new File([blob], `${formData.firstName}_${formData.lastName}_default.png`, { type: 'image/png' });
-      }
-
-      if (!finalMainImageFile) {
-        throw new Error("Aucune image principale n'a pu être générée");
-      }
-
-      // Télécharger l'image principale
-      let mainImageUrl = "";
-      const filePath = generateFileName(finalMainImageFile.name, 'main', agentId);
-      
-
-      
-      // Upload avec options optimisées pour la qualité
-      const uploadResult = await supabase.storage
-        .from('models')
-        .upload(filePath, finalMainImageFile, {
-          cacheControl: '31536000', // 1 an de cache
-          upsert: false, // Ne pas écraser les fichiers existants
-          contentType: finalMainImageFile.type, // Préserver le type MIME original
-        });
-        
-      if (uploadResult.error) {
-        console.error("Erreur détaillée d'upload:", uploadResult.error);
-        throw new Error(`Erreur lors du téléchargement de l'image principale: ${uploadResult.error.message}`);
-      }
-
-      // Récupérer l'URL publique
-      const { data: mainImageData } = supabase.storage.from('models').getPublicUrl(filePath);
-      if (!mainImageData) {
-        throw new Error("Impossible d'obtenir l'URL publique de l'image principale");
-      }
-      mainImageUrl = mainImageData.publicUrl;
-
-
       // Télécharger les images supplémentaires
       const additionalImageUrls: string[] = [];
       for (let i = 0; i < additionalImageFiles.length; i++) {
         const file = additionalImageFiles[i];
         const filePath = generateFileName(file.name, 'additional', agentId, i);
-        
-
         
         const uploadResult = await supabase.storage
           .from('models')
@@ -77,8 +32,8 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
           });
 
         if (uploadResult.error) {
-          console.error("Erreur d'upload image supplémentaire:", uploadResult.error);
-          throw new Error(`Erreur lors du téléchargement de l'image supplémentaire ${i + 1}: ${uploadResult.error.message}`);
+          console.error("Erreur d'upload image:", uploadResult.error);
+          throw new Error(`Erreur lors du téléchargement de l'image ${i + 1}: ${uploadResult.error.message}`);
         }
 
         // Récupérer l'URL publique
@@ -88,7 +43,7 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
         }
       }
 
-      return { mainImageUrl, additionalImageUrls };
+      return { mainImageUrl: "", additionalImageUrls }; // mainImageUrl vide car plus utilisé
     } catch (error) {
       console.error("Erreur dans uploadImagesToStorage:", error);
       throw error;
@@ -98,9 +53,7 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
   // Soumettre le modèle à la base de données
   const submitModel = async (
     formData: AddModelFormData,
-    mainImageFile: File | null,
-    additionalImageFiles: File[],
-    mainImageFocalPoint?: FocalPoint,
+    additionalImageFiles: File[], // Plus de mainImageFile
     additionalImagesFocalPoints?: Record<string, FocalPoint>,
     additionalImages?: string[], // Ajouter l'ordre des images (ancien système)
     // Nouveaux paramètres pour les groupes
@@ -114,14 +67,13 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
         throw new Error("Vous devez être connecté pour ajouter un modèle");
       }
 
-      // Télécharger les images
+      // Télécharger les images (plus d'image principale)
       const { mainImageUrl, additionalImageUrls } = await uploadImagesToStorage(
-        mainImageFile, 
         additionalImageFiles, 
         formData
       );
 
-      // Préparer les données de base du modèle
+      // Préparer les données de base du modèle (plus d'image principale)
       const modelData: any = {
         first_name: formData.firstName,
         last_name: formData.lastName,
@@ -137,8 +89,7 @@ export function useModelSubmission({ agentId }: UseModelSubmissionProps) {
         instagram: formData.instagram || null,
         models_com_link: formData.modelsComLink || null,
         description: formData.description || null,
-        main_image: mainImageUrl,
-        main_image_focal_point: mainImageFocalPoint || null,
+        // Plus de main_image ni main_image_focal_point
         agent_id: agentId
       };
 

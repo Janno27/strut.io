@@ -166,73 +166,105 @@ export function ModelDetail({
       />
       
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-2 mb-6">
-        {/* Image principale */}
-        <div className="rounded-xl overflow-hidden relative">
-          <ModelMainImage
-            imageUrl={model.imageUrl}
-            name={model.name}
-            isEditing={isEditing}
-            tempMainImage={tempMainImage}
-            focalPoint={mainImageFocalPoint}
-            onImageUpload={handleMainImageUpload}
-            onImageRemove={handleMainImageRemove}
-            onImageReposition={handleMainImageReposition}
-          />
-        </div>
-        
-        {/* Informations du modèle */}
-        <div>
-          <div className="h-full flex flex-col justify-between">
-            {isEditing ? (
-              <ModelEditForm
-                formData={formData}
-                isLoading={isLoading}
-                onChange={handleChange}
-                onSelectChange={handleSelectChange}
-                customEyeColor={customEyeColor}
-                customHairColor={customHairColor}
-                onCustomEyeColorChange={handleCustomEyeColorChange}
-                onCustomHairColorChange={handleCustomHairColorChange}
-                showImageManagement={false}
-                books={books}
-                onAddBook={addBook}
-                onRemoveBook={removeBook}
-                onUpdateBook={updateBook}
+        {isEditing ? (
+          /* Mode édition: Groupes d'images à gauche */
+          <>
+            <div className="space-y-4 max-h-[85vh] overflow-y-auto pr-2">
+              <ModelAdditionalImages
+                model={{ 
+                  ...model, 
+                  additional_images_focal_points: additionalImagesFocalPoints,
+                  image_groups: imageGroups
+                }}
+                isEditing={isEditing}
+                imagesToDelete={imagesToDelete}
+                getAllAdditionalImages={getAllAdditionalImages}
+                onImageClick={handleImageClick}
+                onImagesReorder={handleAdditionalImagesReorder}
+                onImageAdd={handleAdditionalImageAdd}
+                onImageRemove={handleAdditionalImageRemoveByIndex}
+                onImageReposition={handleAdditionalImageReposition}
+                onImageGroupsChange={setImageGroups}
+                onGroupImageAdd={handleGroupImageAdd}
+                onGroupImageRemove={handleGroupImageRemove}
+                onGroupImageReposition={handleGroupImageReposition}
               />
-            ) : (
-              <ModelInfo
-                model={model}
-                firstName={firstName}
-                lastName={lastName}
+            </div>
+            
+            {/* Informations du modèle */}
+            <div className="sticky top-0 self-start">
+              <div className="h-full flex flex-col justify-between">
+                <ModelEditForm
+                  formData={formData}
+                  isLoading={isLoading}
+                  onChange={handleChange}
+                  onSelectChange={handleSelectChange}
+                  customEyeColor={customEyeColor}
+                  customHairColor={customHairColor}
+                  onCustomEyeColorChange={handleCustomEyeColorChange}
+                  onCustomHairColorChange={handleCustomHairColorChange}
+                  showImageManagement={false}
+                  books={books}
+                  onAddBook={addBook}
+                  onRemoveBook={removeBook}
+                  onUpdateBook={updateBook}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Mode affichage: Image principale à gauche */
+          <>
+            <div className="rounded-xl overflow-hidden relative">
+              <ModelMainImage
+                name={model.name}
+                isEditing={isEditing}
+                imageGroups={imageGroups}
+                additionalImages={model.additionalImages}
+                imageUrl={model.imageUrl}
+                focalPoint={mainImageFocalPoint}
+                onImageReposition={handleMainImageReposition}
               />
-            )}
-          </div>
-        </div>
+            </div>
+            
+            {/* Informations du modèle */}
+            <div>
+              <div className="h-full flex flex-col justify-between">
+                <ModelInfo
+                  model={model}
+                  firstName={firstName}
+                  lastName={lastName}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
       
-      {/* Images additionnelles */}
-      <div className="space-y-6">
-        <ModelAdditionalImages
-          model={{ 
-            ...model, 
-            additional_images_focal_points: additionalImagesFocalPoints,
-            image_groups: imageGroups
-          }}
-          isEditing={isEditing}
-          imagesToDelete={imagesToDelete}
-          getAllAdditionalImages={getAllAdditionalImages}
-          onImageClick={handleImageClick}
-          onImagesReorder={handleAdditionalImagesReorder}
-          onImageAdd={handleAdditionalImageAdd}
-          onImageRemove={handleAdditionalImageRemoveByIndex}
-          onImageReposition={handleAdditionalImageReposition}
-          onImageGroupsChange={setImageGroups}
-          onGroupImageAdd={handleGroupImageAdd}
-          onGroupImageRemove={handleGroupImageRemove}
-          onGroupImageReposition={handleGroupImageReposition}
-        />
-
-      </div>
+      {/* Images additionnelles - Seulement en mode affichage */}
+      {!isEditing && (
+        <div className="space-y-6">
+          <ModelAdditionalImages
+            model={{ 
+              ...model, 
+              additional_images_focal_points: additionalImagesFocalPoints,
+              image_groups: imageGroups
+            }}
+            isEditing={isEditing}
+            imagesToDelete={imagesToDelete}
+            getAllAdditionalImages={getAllAdditionalImages}
+            onImageClick={handleImageClick}
+            onImagesReorder={handleAdditionalImagesReorder}
+            onImageAdd={handleAdditionalImageAdd}
+            onImageRemove={handleAdditionalImageRemoveByIndex}
+            onImageReposition={handleAdditionalImageReposition}
+            onImageGroupsChange={setImageGroups}
+            onGroupImageAdd={handleGroupImageAdd}
+            onGroupImageRemove={handleGroupImageRemove}
+            onGroupImageReposition={handleGroupImageReposition}
+          />
+        </div>
+      )}
       
       {/* Modal d'image plein écran */}
       <ModelImageModal

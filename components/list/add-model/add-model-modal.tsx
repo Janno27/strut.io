@@ -50,20 +50,14 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
     setIsLoading,
   } = useAddModelForm({ appointmentData })
 
-  // Hooks pour la gestion des images
+  // Hooks pour la gestion des images (anciennes images supplémentaires, maintenant inutilisées)
   const {
-    mainImage,
     additionalImages,
-    mainImageFile,
     additionalImageFiles,
-    mainImageFocalPoint,
     additionalImagesFocalPoints,
-    handleMainImageUpload,
-    handleMainImageRemove,
     handleAdditionalImageUpload,
     handleAdditionalImageRemove,
     handleAdditionalImagesReorder,
-    handleMainImageReposition,
     handleAdditionalImageReposition,
     handlePositionComplete: handleOldPositionComplete,
     resetImages,
@@ -108,9 +102,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
 
   // Gérer la completion du repositionnement
   const handlePositionComplete = (focalPoint: { x: number; y: number }) => {
-    if (positionImageType === "main") {
-      handleOldPositionComplete(focalPoint)
-    } else if (positionImageType === "group") {
+    if (positionImageType === "group") {
       handleFocalPointUpdate(positionImageUrl, focalPoint)
     }
     setIsPositionEditorOpen(false)
@@ -148,15 +140,11 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
       const finalFormData = getFinalFormData()
       const success = await submitModel(
         finalFormData, 
-        mainImageFile, 
-        additionalImageFiles,
-        mainImageFocalPoint,
-        additionalImagesFocalPoints,
-        additionalImages,
-        // Nouveaux paramètres pour les groupes
+        [], // additionalImageFiles (vide car on utilise maintenant les groupes)
+        {}, // additionalImagesFocalPoints (vide)
+        [], // additionalImages (vide)
         uploadGroupImages,
         getGroupsForSave,
-        // Paramètre pour les books
         getBooksForSave
       )
       
@@ -187,41 +175,21 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {/* Image principale */}
-            <div className="space-y-2">
-              <Label>Photo principale</Label>
-              <MainImageUploader
-                image={mainImage}
-                focalPoint={mainImageFocalPoint}
-                onImageUpload={handleMainImageUpload}
-                onImageRemove={handleMainImageRemove}
-                onImageReposition={handleMainImageReposition}
-              />
-            </div>
-            
-            {/* Champs du formulaire */}
-            <div className="md:col-span-2">
-              <ModelFormFields
-                formData={formData}
-                customEyeColor={customEyeColor}
-                customHairColor={customHairColor}
-                isLoading={isLoading}
-                onChange={handleChange}
-                onSelectChange={handleSelectChange}
-                onCustomValueChange={handleCustomValueChange}
-              />
-              
-              {/* Books & Portfolios - Placé après la description */}
-              <div className="mt-4">
-                <ModelBooksSectionSimple
-                  books={books}
-                  onAddBook={addBook}
-                  onRemoveBook={removeBook}
-                  onUpdateBook={updateBook}
-                />
-              </div>
-            </div>
+          {/* Champs du formulaire */}
+          <div className="space-y-4">
+            <ModelFormFields
+              formData={formData}
+              customEyeColor={customEyeColor}
+              customHairColor={customHairColor}
+              isLoading={isLoading}
+              onChange={handleChange}
+              onSelectChange={handleSelectChange}
+              onCustomValueChange={handleCustomValueChange}
+              books={books}
+              onAddBook={addBook}
+              onRemoveBook={removeBook}
+              onUpdateBook={updateBook}
+            />
           </div>
           
           {/* Images supplémentaires avec groupes */}
@@ -250,9 +218,7 @@ export function AddModelModal({ isOpen, onClose, onModelAdded, appointmentData }
           onClose={() => setIsPositionEditorOpen(false)}
           imageUrl={positionImageUrl}
           currentFocalPoint={
-            positionImageType === "main" 
-              ? mainImageFocalPoint 
-              : positionImageType === "group"
+            positionImageType === "group"
               ? groupImagesFocalPoints[positionImageUrl]
               : additionalImagesFocalPoints[positionImageUrl]
           }

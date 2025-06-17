@@ -21,6 +21,7 @@ interface ImageGroupsManagerProps {
   onImageClick?: (imageUrl: string, index: number) => void
   showHeader?: boolean
   headerTitle?: string
+  gridCols?: number
 }
 
 export function ImageGroupsManager({
@@ -33,7 +34,8 @@ export function ImageGroupsManager({
   onImageReposition,
   onImageClick,
   showHeader = false,
-  headerTitle = ""
+  headerTitle = "",
+  gridCols = 3
 }: ImageGroupsManagerProps) {
   const [newGroupName, setNewGroupName] = useState("")
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
@@ -56,6 +58,14 @@ export function ImageGroupsManager({
     onImageGroupsChange(newGroups)
     setNewGroupName("")
     setIsCreateDialogOpen(false)
+    
+    // Scroll automatique vers le nouveau groupe
+    setTimeout(() => {
+      const groupElement = document.getElementById(`group-${groupId}`)
+      if (groupElement) {
+        groupElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
   }
 
   // Renommer un groupe
@@ -203,7 +213,7 @@ export function ImageGroupsManager({
     <div className="space-y-6">
       {/* Header avec titre et bouton créer groupe */}
       {showHeader && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between sticky top-0 bg-white dark:bg-gray-900 z-10 py-2 -mt-2">
           <Label className="text-xs">{headerTitle}</Label>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
@@ -282,7 +292,7 @@ export function ImageGroupsManager({
 
       {/* Groupes d'images */}
       {groupIds.map((groupId) => (
-        <div key={groupId} className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 space-y-3">
+        <div key={groupId} id={`group-${groupId}`} className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 space-y-3">
           {/* Header du groupe */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -337,6 +347,7 @@ export function ImageGroupsManager({
             onImageReposition={(index) => onImageReposition(groupId, index)}
             allowMultiple={true}
             maxImages={20}
+            gridCols={gridCols}
           />
         </div>
       ))}

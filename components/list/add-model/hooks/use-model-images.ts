@@ -5,20 +5,17 @@ import { validateAndCompressImage } from "@/lib/services/image-compression"
 import { FocalPoint } from "../types"
 
 export function useModelImages() {
-  // État pour les images
-  const [mainImage, setMainImage] = useState<string | null>(null)
+  // État pour les images (plus de gestion d'image principale)
   const [additionalImages, setAdditionalImages] = useState<string[]>([])
-  const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([])
   
   // État pour le repositionnement d'image
   const [isPositionEditorOpen, setIsPositionEditorOpen] = useState(false)
   const [positionImageUrl, setPositionImageUrl] = useState("")
-  const [positionImageType, setPositionImageType] = useState<"main" | "additional">("main")
+  const [positionImageType, setPositionImageType] = useState<"additional">("additional")
   const [positionImageIndex, setPositionImageIndex] = useState<number>(-1)
   
-  // États pour les focal points
-  const [mainImageFocalPoint, setMainImageFocalPoint] = useState<FocalPoint | undefined>(undefined)
+  // États pour les focal points (plus de focal point pour l'image principale)
   const [additionalImagesFocalPoints, setAdditionalImagesFocalPoints] = useState<Record<string, FocalPoint>>({})
 
   // Fonction pour nettoyer les URLs blob
@@ -34,52 +31,7 @@ export function useModelImages() {
     });
   };
 
-  // Télécharger l'image principale
-  const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      try {
-        // Valider et compresser l'image
-        const result = await validateAndCompressImage(file, true) // true pour image principale
-        
-        if (!result.isValid || !result.file) {
-          toast.error(result.error || "Erreur de validation de l'image")
-          return
-        }
-        
-        // Nettoyer l'ancienne URL blob si elle existe
-        if (mainImage) {
-          cleanupBlobUrls([mainImage])
-        }
-        
-        setMainImageFile(result.file)
-        const imageUrl = URL.createObjectURL(result.file)
-        setMainImage(imageUrl)
-        
-        // Afficher les informations de compression
-        const compressionRatio = ((file.size - result.file.size) / file.size) * 100
-        if (compressionRatio > 5) { // Seulement si compression significative
-          toast.success(`Image compressée avec succès (${compressionRatio.toFixed(1)}% de réduction)`)
-        }
-      } catch (error) {
-        console.error('Erreur lors du traitement de l\'image:', error)
-        toast.error('Erreur lors du traitement de l\'image')
-      }
-    }
-  }
-
-  // Supprimer l'image principale
-  const handleMainImageRemove = () => {
-    // Nettoyer l'URL blob avant de supprimer
-    if (mainImage) {
-      cleanupBlobUrls([mainImage]);
-    }
-    setMainImage(null)
-    setMainImageFile(null)
-    setMainImageFocalPoint(undefined)
-  }
-
-  // Télécharger des images supplémentaires (multiple)
+  // Télécharger des images (maintenant toutes gérées comme images supplémentaires)
   const handleAdditionalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files && files.length > 0) {
@@ -87,13 +39,13 @@ export function useModelImages() {
         // Convertir FileList en Array pour pouvoir itérer dessus
         const filesArray = Array.from(files)
         
-        // Vérifier la limite d'images (max 10 images supplémentaires)
+        // Vérifier la limite d'images (max 10 images)
         const currentCount = additionalImageFiles.length
-        const maxAdditional = 10
-        const remainingSlots = maxAdditional - currentCount
+        const maxImages = 10
+        const remainingSlots = maxImages - currentCount
         
         if (filesArray.length > remainingSlots) {
-          toast.warning(`Limite atteinte. Seulement ${remainingSlots} images supplémentaires peuvent être ajoutées.`)
+          toast.warning(`Limite atteinte. Seulement ${remainingSlots} images peuvent être ajoutées.`)
           filesArray.splice(remainingSlots)
         }
         
@@ -158,7 +110,7 @@ export function useModelImages() {
     }
   }
 
-  // Supprimer une image supplémentaire
+  // Supprimer une image
   const handleAdditionalImageRemove = (index: number) => {
     const imageToRemove = additionalImages[index]
     
@@ -176,7 +128,7 @@ export function useModelImages() {
     setAdditionalImageFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Réorganiser les images supplémentaires
+  // Réorganiser les images
   const handleAdditionalImagesReorder = (newImages: string[]) => {
     // Créer un nouvel ordre pour les fichiers basé sur l'ordre des URLs
     const newFiles = newImages.map(imageUrl => {
@@ -189,15 +141,6 @@ export function useModelImages() {
   }
 
   // Gestion du repositionnement d'images
-  const handleMainImageReposition = () => {
-    if (mainImage) {
-      setPositionImageUrl(mainImage)
-      setPositionImageType("main")
-      setPositionImageIndex(-1)
-      setIsPositionEditorOpen(true)
-    }
-  }
-
   const handleAdditionalImageReposition = (index: number) => {
     const imageUrl = additionalImages[index]
     if (imageUrl) {
@@ -209,9 +152,7 @@ export function useModelImages() {
   }
 
   const handlePositionComplete = (focalPoint: FocalPoint) => {
-    if (positionImageType === "main") {
-      setMainImageFocalPoint(focalPoint)
-    } else if (positionImageType === "additional") {
+    if (positionImageType === "additional") {
       const imageUrl = additionalImages[positionImageIndex]
       setAdditionalImagesFocalPoints(prev => ({
         ...prev,
@@ -221,59 +162,50 @@ export function useModelImages() {
     
     setIsPositionEditorOpen(false)
     setPositionImageUrl("")
-    setPositionImageType("main")
+    setPositionImageType("additional")
     setPositionImageIndex(-1)
   }
 
   // Réinitialiser les images
   const resetImages = () => {
     // Nettoyer toutes les URLs blob pour éviter les fuites mémoire
-    const urlsToClean = [mainImage, ...additionalImages].filter((url): url is string => Boolean(url));
+    const urlsToClean = additionalImages.filter((url): url is string => Boolean(url));
     cleanupBlobUrls(urlsToClean);
     
-    setMainImage(null)
     setAdditionalImages([])
-    setMainImageFile(null)
     setAdditionalImageFiles([])
     
     // Réinitialiser aussi les états de repositionnement
     setIsPositionEditorOpen(false)
     setPositionImageUrl("")
-    setPositionImageType("main")
+    setPositionImageType("additional")
     setPositionImageIndex(-1)
     
     // Réinitialiser les focal points
-    setMainImageFocalPoint(undefined)
     setAdditionalImagesFocalPoints({})
   }
 
   return {
-    // États des images
-    mainImage,
+    // Plus d'états pour l'image principale
     additionalImages,
-    mainImageFile,
     additionalImageFiles,
+    additionalImagesFocalPoints,
     
-    // États de repositionnement
+    // Handlers d'upload (plus de handler pour image principale)
+    handleAdditionalImageUpload,
+    handleAdditionalImageRemove,
+    handleAdditionalImagesReorder,
+    
+    // Repositionnement (plus de repositionnement pour image principale)
     isPositionEditorOpen,
     positionImageUrl,
     positionImageType,
     positionImageIndex,
-    
-    // États des focal points
-    mainImageFocalPoint,
-    additionalImagesFocalPoints,
-    
-    // Actions
-    handleMainImageUpload,
-    handleMainImageRemove,
-    handleAdditionalImageUpload,
-    handleAdditionalImageRemove,
-    handleAdditionalImagesReorder,
-    handleMainImageReposition,
     handleAdditionalImageReposition,
     handlePositionComplete,
-    setIsPositionEditorOpen,
+    
+    // Utilitaires
     resetImages,
+    cleanupBlobUrls
   }
 } 

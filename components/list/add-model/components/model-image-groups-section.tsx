@@ -25,7 +25,6 @@ export function ModelImageGroupsSection({
 }: ModelImageGroupsSectionProps) {
   return (
     <div className="space-y-2">
-      <Label>Photos supplémentaires</Label>
       <ImageGroupsManager
         imageGroups={imageGroups}
         focalPoints={focalPoints}
@@ -35,6 +34,9 @@ export function ModelImageGroupsSection({
         onImageRemove={onImageRemove}
         onImageReposition={onImageReposition}
         onImageClick={onImageClick}
+        showHeader={true}
+        headerTitle="Photos supplémentaires"
+        gridCols={4}
       />
     </div>
   )

@@ -20,6 +20,7 @@ interface DraggableImageGridProps {
   maxImages?: number
   className?: string
   focalPoints?: Record<string, FocalPoint>
+  gridCols?: number
 }
 
 export function DraggableImageGrid({
@@ -31,7 +32,8 @@ export function DraggableImageGrid({
   allowMultiple = true,
   maxImages = 10,
   className = "",
-  focalPoints = {}
+  focalPoints = {},
+  gridCols = 3
 }: DraggableImageGridProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
@@ -82,12 +84,14 @@ export function DraggableImageGrid({
 
 
 
+  const gridClass = gridCols === 4 ? 'grid-cols-4' : 'grid-cols-3'
+  
   return (
-    <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 ${className}`}>
+    <div className={`grid ${gridClass} gap-4 ${className}`}>
       {images.map((image, index) => (
         <div
           key={`${image}-${index}`}
-          className={`relative h-40 border-2 rounded-lg overflow-hidden group cursor-move transition-all duration-200 ${
+          className={`relative aspect-square border-2 rounded-lg overflow-hidden group cursor-move transition-all duration-200 ${
             dragOverIndex === index 
               ? "border-primary bg-primary/10 scale-105" 
               : draggedIndex === index
@@ -159,7 +163,7 @@ export function DraggableImageGrid({
       
       {/* Bouton d'ajout */}
       {images.length < maxImages && (
-        <div className="relative h-40 border-2 border-dashed border-muted-foreground rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors">
+        <div className="relative aspect-square border-2 border-dashed border-muted-foreground rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors">
           <Plus className="h-8 w-8 mb-2 text-muted-foreground" />
           <p className="text-xs text-muted-foreground text-center px-2">
             {allowMultiple ? "Ajouter plusieurs photos" : "Ajouter une photo"}

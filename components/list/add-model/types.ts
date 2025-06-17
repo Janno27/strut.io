@@ -47,6 +47,10 @@ export interface ModelFormFieldsProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
   onSelectChange: (value: string, name: string) => void
   onCustomValueChange: (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => void
+  books?: any[]
+  onAddBook?: (name: string, url: string) => boolean
+  onRemoveBook?: (bookId: string) => void
+  onUpdateBook?: (bookId: string, name: string, url: string) => boolean
 }
 
 export interface ModelImagesSectionProps {

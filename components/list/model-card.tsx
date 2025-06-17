@@ -4,6 +4,8 @@ import { motion } from "framer-motion"
 import { Heart, Star } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { OptimizedImage } from "@/components/ui/optimized-image"
+import { getMainImageFromGroups } from "@/lib/utils/image-utils"
+import { ImageGroups } from "@/components/list/detail/types"
 
 interface ModelCardProps {
   model: {
@@ -14,7 +16,9 @@ interface ModelCardProps {
     bust: number
     waist: number
     hips: number
-    imageUrl: string | null | undefined
+    imageUrl?: string | null // Garde pour compatibilité, mais ne sera plus utilisé
+    additionalImages?: string[]
+    image_groups?: ImageGroups
     is_shortlisted?: boolean
   }
   onClick: () => void
@@ -32,6 +36,9 @@ export function ModelCard({
 }: ModelCardProps) {
   // Diviser le nom complet en prénom et nom
   const [firstName, lastName] = model.name.split(' ')
+
+  // Récupérer l'image principale automatiquement depuis les groupes
+  const mainImageUrl = getMainImageFromGroups(model.image_groups, model.additionalImages) || model.imageUrl || ""
 
   return (
     <motion.div 
@@ -56,7 +63,7 @@ export function ModelCard({
           transition={{ duration: 0.3 }}
         >
           <OptimizedImage
-            src={model.imageUrl || ""}
+            src={mainImageUrl}
             alt={model.name}
             fill
             className="object-cover"

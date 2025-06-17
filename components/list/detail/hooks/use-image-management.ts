@@ -354,6 +354,25 @@ export function useImageManagement({ model, isEditing, onModelUpdated }: UseImag
         ...prev,
         [positionImageUrl]: focalPoint
       }))
+      
+      // Si c'est la première image du premier groupe, synchroniser avec l'image principale
+      const imageGroups = imageGroupsHook.imageGroups
+      if (imageGroups) {
+        // Vérifier si c'est la première image du groupe ungrouped
+        const ungroupedImages = imageGroups.ungrouped
+        if (Array.isArray(ungroupedImages) && ungroupedImages.length > 0 && ungroupedImages[0] === positionImageUrl) {
+          setMainImageFocalPoint(focalPoint)
+        } else {
+          // Vérifier si c'est la première image du premier groupe nommé
+          const groupKeys = Object.keys(imageGroups).filter(key => key !== 'ungrouped')
+          if (groupKeys.length > 0) {
+            const firstGroup = imageGroups[groupKeys[0]]
+            if (firstGroup && !Array.isArray(firstGroup) && firstGroup.images && firstGroup.images.length > 0 && firstGroup.images[0] === positionImageUrl) {
+              setMainImageFocalPoint(focalPoint)
+            }
+          }
+        }
+      }
     }
     
     setIsPositionEditorOpen(false)
