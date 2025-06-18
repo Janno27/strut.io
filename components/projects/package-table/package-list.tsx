@@ -35,6 +35,10 @@ interface Package {
   package_name: string;
   package_description?: string;
   package_status: string;
+  package_price?: number;
+  package_deadline?: string;
+  model_count?: number;
+  created_at?: string;
 }
 
 interface PackageListProps {
@@ -113,9 +117,13 @@ export function PackageList({ packages, onDeletePackage, onEditPackage, onShareP
     );
   }
 
+  // Les packages sont maintenant triés directement dans la requête (plus récent au plus ancien)
+  // Pas besoin de tri supplémentaire côté client
+  const sortedPackages = packages;
+
   return (
     <div className="space-y-6">
-      {packages.map((pkg) => (
+      {sortedPackages.map((pkg) => (
         <div key={pkg.package_id} className="space-y-3">
           {/* En-tête avec titre, statut et menu */}
           <div className="flex justify-between items-start">

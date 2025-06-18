@@ -58,14 +58,27 @@ export function PackageTable({ projectId }: PackageTableProps) {
     setIsLoading(true);
     
     try {
-      // Charger les packages
+      // Charger les packages avec le tri par date de création (plus récent au plus ancien)
       const { data: packagesData, error: packagesError } = await supabase
-        .rpc('get_project_packages', { project_uuid: projectId });
+        .from('packages')
+        .select('id, name, description, status, price, deadline, created_at')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
         
       if (packagesError) throw packagesError;
       
       if (packagesData) {
-        setPackages(packagesData);
+        // Transformer les données pour correspondre à l'interface attendue
+        const formattedPackages = packagesData.map((pkg: any) => ({
+          package_id: pkg.id,
+          package_name: pkg.name,
+          package_description: pkg.description,
+          package_status: pkg.status,
+          package_price: pkg.price,
+          package_deadline: pkg.deadline,
+          created_at: pkg.created_at
+        }));
+        setPackages(formattedPackages);
       }
       
       // Charger les mannequins de l'agent connecté

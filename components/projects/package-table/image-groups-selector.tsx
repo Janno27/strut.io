@@ -139,6 +139,11 @@ export function ImageGroupsSelector({
   }
 
   const availableGroups = model?.image_groups ? Object.keys(model.image_groups) : []
+  
+  // Trier les groupes par ordre de création (du plus récent au plus ancien)
+  // On inverse l'ordre des clés pour avoir les plus récents en premier
+  const sortedGroups = [...availableGroups].reverse()
+  
   const hasGroups = availableGroups.length > 0
 
   return (
@@ -174,7 +179,7 @@ export function ImageGroupsSelector({
             
             <div className="max-h-60 overflow-y-auto">
               <div className="space-y-3">
-                {availableGroups.map(groupId => {
+                {sortedGroups.map(groupId => {
                   const imageCount = getGroupImageCount(groupId, model!.image_groups!)
                   if (imageCount === 0) return null // Ne pas afficher les groupes vides
                   

@@ -20,12 +20,14 @@ import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
 import { Heart, UserCheck, UserX, Star, Plus, Search } from "lucide-react"
 import { useAuth } from "@/lib/auth/auth-provider"
+import { getMainImageFromGroups } from "@/lib/utils/image-utils"
 
 interface Model {
   id: string
   first_name: string
   last_name: string
-  main_image: string
+  image_groups?: any
+  additional_images?: string[]
   is_shortlisted?: boolean
   shared_image_groups?: string[]
   shared_books?: string[]
@@ -96,7 +98,8 @@ export function PackageDuplicateDialog({
             id,
             first_name,
             last_name,
-            main_image
+            image_groups,
+            additional_images
           )
         `)
         .eq('package_id', originalPackage.id)
@@ -107,7 +110,8 @@ export function PackageDuplicateDialog({
         id: item.models.id,
         first_name: item.models.first_name,
         last_name: item.models.last_name,
-        main_image: item.models.main_image,
+        image_groups: item.models.image_groups,
+        additional_images: item.models.additional_images,
         is_shortlisted: item.is_shortlisted || false,
         shared_image_groups: item.shared_image_groups || [],
         shared_books: item.shared_books || []
@@ -130,7 +134,7 @@ export function PackageDuplicateDialog({
     try {
       const { data, error } = await supabase
         .from('models')
-        .select('id, first_name, last_name, main_image')
+        .select('id, first_name, last_name, image_groups, additional_images')
         .eq('agent_id', user.id)
         .order('first_name')
 
@@ -325,7 +329,7 @@ export function PackageDuplicateDialog({
                   <div key={model.id} className="border rounded-lg p-3 hover:bg-muted/50 transition-colors">
                     <div className="flex items-center space-x-3">
                       <img 
-                        src={model.main_image} 
+                        src={getMainImageFromGroups(model.image_groups, model.additional_images) || "/placeholder-image.jpg"} 
                         alt={`${model.first_name} ${model.last_name}`}
                         className="w-10 h-10 rounded-full object-cover"
                       />
@@ -386,7 +390,7 @@ export function PackageDuplicateDialog({
                     <div key={model.id} className="border rounded-lg p-3 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center space-x-3">
                         <img 
-                          src={model.main_image} 
+                          src={getMainImageFromGroups(model.image_groups, model.additional_images) || "/placeholder-image.jpg"} 
                           alt={`${model.first_name} ${model.last_name}`}
                           className="w-10 h-10 rounded-full object-cover"
                         />

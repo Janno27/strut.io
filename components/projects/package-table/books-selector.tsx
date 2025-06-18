@@ -213,7 +213,7 @@ export function BooksSelector({
                             onClick={(e) => e.stopPropagation()}
                             title={book.url}
                           >
-                            {book.url}
+                            {book.url.length > 50 ? `${book.url.substring(0, 47)}...` : book.url}
                           </a>
                         </div>
                       </div>
