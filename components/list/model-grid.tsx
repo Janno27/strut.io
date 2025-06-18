@@ -10,7 +10,7 @@ import { AddModelModal } from "./add-model-modal"
 interface Model {
   id: string
   name: string
-  age: number
+  age?: number | null
   height: number
   bust: number
   waist: number

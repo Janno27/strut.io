@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 interface Model {
   id: string
   name: string
-  age: number
+  age?: number | null
   height: number
   bust: number
   waist: number
@@ -75,7 +75,7 @@ export function WishlistDrawer({
                 <div className="flex-grow">
                   <h4 className="font-medium">{model.name}</h4>
                   <p className="text-sm text-muted-foreground">
-                    {model.age} • {model.height} • {model.bust}/{model.waist}/{model.hips}
+                    {(model.age && model.age > 0) ? `${model.age} • ` : ""}{model.height} • {model.bust}/{model.waist}/{model.hips}
                   </p>
                 </div>
                 <Button
