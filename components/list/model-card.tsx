@@ -4,7 +4,7 @@ import { motion } from "framer-motion"
 import { Heart, Star } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { OptimizedImage } from "@/components/ui/optimized-image"
-import { getMainImageFromGroups } from "@/lib/utils/image-utils"
+import { getMainImageFromGroups, getMainImageFocalPoint } from "@/lib/utils/image-utils"
 import { ImageGroups } from "@/components/list/detail/types"
 
 interface ModelCardProps {
@@ -18,6 +18,7 @@ interface ModelCardProps {
     hips: number
     imageUrl?: string | null // Garde pour compatibilité, mais ne sera plus utilisé
     additionalImages?: string[]
+    additional_images_focal_points?: Record<string, { x: number; y: number }>
     image_groups?: ImageGroups
     is_shortlisted?: boolean
   }
@@ -39,6 +40,18 @@ export function ModelCard({
 
   // Récupérer l'image principale automatiquement depuis les groupes
   const mainImageUrl = getMainImageFromGroups(model.image_groups, model.additionalImages) || model.imageUrl || ""
+  
+  // Récupérer le focal point de l'image principale
+  const mainImageFocalPoint = getMainImageFocalPoint(
+    model.image_groups, 
+    model.additionalImages, 
+    model.additional_images_focal_points
+  )
+  
+  // Calculer la position de l'objet pour le CSS
+  const objectPosition = mainImageFocalPoint 
+    ? `${mainImageFocalPoint.x}% ${mainImageFocalPoint.y}%` 
+    : 'center'
 
   return (
     <motion.div 
@@ -67,6 +80,7 @@ export function ModelCard({
             alt={model.name}
             fill
             className="object-cover"
+            objectPosition={objectPosition}
             sizes="(max-width: 768px) 100vw, 33vw"
             priority
             cacheWidth={400}

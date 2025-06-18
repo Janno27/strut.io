@@ -113,4 +113,21 @@ export function getTotalImageCount(
   }
   
   return count
+}
+
+/**
+ * Récupère le focal point de l'image principale
+ */
+export function getMainImageFocalPoint(
+  imageGroups?: ImageGroups,
+  additionalImages?: string[],
+  additionalImagesFocalPoints?: Record<string, { x: number; y: number }>
+): { x: number; y: number } | null {
+  const mainImageUrl = getMainImageFromGroups(imageGroups, additionalImages)
+  
+  if (!mainImageUrl || !additionalImagesFocalPoints) {
+    return null
+  }
+  
+  return additionalImagesFocalPoints[mainImageUrl] || null
 } 
