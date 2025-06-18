@@ -1,17 +1,19 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Heart, Star } from "lucide-react"
+import { Heart, Star, ToggleLeft, ToggleRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { OptimizedImage } from "@/components/ui/optimized-image"
+import { TooltipProvider, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { getMainImageFromGroups, getMainImageFocalPoint } from "@/lib/utils/image-utils"
 import { ImageGroups } from "@/components/list/detail/types"
+import { useUnitToggle } from "@/hooks/use-unit-toggle"
 
 interface ModelCardProps {
   model: {
     id: string
     name: string
-    age: number
+    age?: number | null
     height: number
     bust: number
     waist: number
@@ -35,6 +37,8 @@ export function ModelCard({
   isFavorite,
   onToggleFavorite
 }: ModelCardProps) {
+  const { unit, toggleUnit, formatMeasurement, formatMeasurementSimple } = useUnitToggle()
+  
   // Diviser le nom complet en prénom et nom
   const [firstName, lastName] = model.name.split(' ')
 
@@ -52,6 +56,12 @@ export function ModelCard({
   const objectPosition = mainImageFocalPoint 
     ? `${mainImageFocalPoint.x}% ${mainImageFocalPoint.y}%` 
     : 'center'
+
+  // Construire l'affichage des informations (conditions d'affichage)
+  const ageDisplay = (model.age && model.age > 0) ? `${model.age} • ` : ""
+  const heightDisplay = model.height && model.height > 0 ? `${model.height} • ` : ""
+  const hasMeasurements = model.bust && model.waist && model.hips
+  const measurementsDisplay = hasMeasurements ? `${model.bust}/${model.waist}/${model.hips}` : ""
 
   return (
     <motion.div 
@@ -137,9 +147,45 @@ export function ModelCard({
         <div className="font-medium">
           {firstName} {lastName}
         </div>
-        <div className="text-sm text-muted-foreground mt-0.5">
-          {model.age || "-"} • {model.height} • {model.bust}/{model.waist}/{model.hips}
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+                         <TooltipTrigger asChild>
+               <div className="text-sm text-muted-foreground mt-0.5 cursor-help">
+                 {ageDisplay}{heightDisplay}{measurementsDisplay}
+               </div>
+             </TooltipTrigger>
+                         <TooltipContent>
+               <div className="space-y-1">
+                 {(model.age && model.age > 0) && <p>Âge: {model.age} ans</p>}
+                 {model.height && model.height > 0 && <p>Taille: {formatMeasurement(model.height, true)}</p>}
+                 {hasMeasurements && (
+                   <>
+                     <div className="flex items-center gap-2">
+                       <span>Mensurations ({unit === 'cm' ? 'cm' : 'pouces'}):</span>
+                       <button
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           toggleUnit();
+                         }}
+                         className="flex items-center text-xs hover:text-foreground transition-colors"
+                         title={`Basculer vers ${unit === 'cm' ? 'pouces' : 'cm'}`}
+                       >
+                         {unit === 'cm' ? (
+                           <ToggleLeft className="w-3 h-3" />
+                         ) : (
+                           <ToggleRight className="w-3 h-3" />
+                         )}
+                       </button>
+                     </div>
+                     <p>Buste: {formatMeasurement(model.bust)}</p>
+                     <p>Taille: {formatMeasurement(model.waist)}</p>
+                     <p>Hanches: {formatMeasurement(model.hips)}</p>
+                   </>
+                 )}
+               </div>
+             </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </motion.div>
   )

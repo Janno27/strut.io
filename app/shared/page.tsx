@@ -16,7 +16,7 @@ interface Model {
   first_name: string
   last_name: string
   gender: string
-  age: number
+  age?: number | null
   height: number
   bust: number
   waist: number
@@ -64,7 +64,7 @@ interface PackageModelData {
 interface GridModel {
   id: string
   name: string
-  age: number
+  age?: number | null
   height: number
   bust: number
   waist: number
@@ -408,7 +408,7 @@ function SharedPageContent() {
       .map(model => ({
         id: model.id,
         name: `${model.first_name} ${model.last_name}`,
-        age: model.age || 0,
+        age: model.age,
         height: model.height,
         bust: model.bust,
         waist: model.waist,
@@ -452,7 +452,7 @@ function SharedPageContent() {
       return {
         id: model.id,
         name: `${model.first_name} ${model.last_name}`,
-        age: model.age || 0,
+        age: model.age,
         height: model.height,
         bust: model.bust,
         waist: model.waist,
